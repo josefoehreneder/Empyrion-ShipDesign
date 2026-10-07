@@ -1,0 +1,38 @@
+EMPYRION WERFTPLANER – Installation als Android-App
+=====================================================
+
+Die App muss einmal über eine https-Adresse erreichbar sein. Danach lässt sie
+sich auf dem Handy installieren und läuft auch ohne Internet.
+
+Kostenlos online stellen mit GitHub Pages
+-----------------------------------------
+1. Auf https://github.com ein kostenloses Konto anlegen und anmelden.
+2. Oben rechts auf „+“ → „New repository“.
+   Name z. B.: werftplaner   ·   „Public“ auswählen   ·   „Create repository“.
+3. Auf der neuen Seite den Link „uploading an existing file“ anklicken.
+4. ALLE Dateien und den Ordner „icons“ aus diesem Paket hineinziehen
+   (index.html, manifest.webmanifest, sw.js, icons/…).
+   Wichtig: index.html muss ganz oben liegen, nicht in einem Unterordner.
+   → unten auf „Commit changes“.
+5. Im Repository: „Settings“ → links „Pages“.
+   Bei „Branch“ „main“ und „/ (root)“ wählen → „Save“.
+6. Nach 1–2 Minuten steht dort die Adresse, z. B.
+   https://DEINNAME.github.io/werftplaner/
+
+Auf dem Handy installieren
+--------------------------
+1. Die Adresse in Chrome auf dem Android-Handy öffnen.
+2. Auf „App installieren“ in der App tippen – oder im Chrome-Menü (⋮)
+   auf „App installieren“ / „Zum Startbildschirm hinzufügen“.
+3. Fertig: Der Werftplaner liegt als Symbol auf dem Startbildschirm,
+   startet im Vollbild und funktioniert offline.
+
+Gut zu wissen
+-------------
+- Deine Designs werden auf dem Handy gespeichert. Sichere sie ab und zu
+  unter „Dateien & Teilen“ → „Alle Designs sichern“ (landet in „Downloads“).
+- Wenn du die App deinstallierst oder die Website-Daten in Chrome löschst,
+  sind die gespeicherten Designs weg – vorher sichern!
+- Neue Version einspielen: geänderte Dateien wieder hochladen und in sw.js
+  die Zeile  const CACHE = 'werftplaner-v1';  auf v2, v3 … erhöhen.
+  Die App holt sich die neue Version beim nächsten Start mit Internet.
