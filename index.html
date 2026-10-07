@@ -73,6 +73,10 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 input[type=text],input[type=number],select,textarea{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:9px 10px;min-width:0;font-size:16px}
 input[type=number]{width:4.2em;font-family:var(--f-mono);font-variant-numeric:tabular-nums;padding:9px 6px}
 .dims{display:flex;align-items:center;gap:6px;color:var(--muted);flex-wrap:wrap}
+.dimgrid{display:grid;grid-template-columns:auto 44px minmax(0,5em) 44px;gap:6px;align-items:center;justify-content:start}
+.dimgrid>span{font-size:.85rem;color:var(--muted);min-width:4.5em}
+.dimgrid input{width:100%;text-align:center}
+.btn.sq{padding:0;width:44px;font-size:1.1rem}
 .menu{display:grid;grid-template-columns:1fr 1fr;gap:6px;border-top:1px solid var(--line);padding-top:12px}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:8px 12px;font-weight:600;text-align:center}
 .btn:hover{border-color:var(--accent)}
@@ -256,13 +260,14 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
           <option value="BA">BA · Basis (2-m-Blöcke)</option>
         </select>
       </label>
-      <div class="fld"><span>Raster B × L × H (Blöcke)</span>
-        <div class="dims">
-          <input id="dw" type="number" inputmode="numeric" min="3" max="48" aria-label="Breite"> ×
-          <input id="dl" type="number" inputmode="numeric" min="3" max="48" aria-label="Länge"> ×
-          <input id="dh" type="number" inputmode="numeric" min="1" max="48" aria-label="Höhe">
-          <button class="btn" id="resize">Übernehmen</button>
+      <div class="fld"><span>Rastergröße in Blöcken</span>
+        <div class="dimgrid">
+          <span>Breite</span><button class="btn sq" data-dim="dw" data-step="-2" aria-label="Breite verkleinern">−</button><input id="dw" type="number" inputmode="numeric" min="3" max="48" aria-label="Breite"><button class="btn sq" data-dim="dw" data-step="2" aria-label="Breite vergrößern">+</button>
+          <span>Länge</span><button class="btn sq" data-dim="dl" data-step="-2" aria-label="Länge verkleinern">−</button><input id="dl" type="number" inputmode="numeric" min="3" max="48" aria-label="Länge"><button class="btn sq" data-dim="dl" data-step="2" aria-label="Länge vergrößern">+</button>
+          <span>Höhe</span><button class="btn sq" data-dim="dh" data-step="-2" aria-label="Höhe verkleinern">−</button><input id="dh" type="number" inputmode="numeric" min="1" max="48" aria-label="Höhe"><button class="btn sq" data-dim="dh" data-step="2" aria-label="Höhe vergrößern">+</button>
         </div>
+        <p class="hint">Das Raster wächst und schrumpft gleichmäßig nach allen Seiten, die Mitte bleibt die Mitte. +/− ändert um einen Block je Seite.</p>
+        <button class="btn" id="resize">Größe übernehmen</button>
       </div>
       <div class="menu">
         <button class="btn primary" id="saveBtn">Speichern</button>
@@ -733,6 +738,8 @@ function drawGrid(){
   for(let i=0;i<=S.W;i++){ctx.strokeStyle=i%5===0?T.gridStrong:T.gridLine;ctx.beginPath();ctx.moveTo(i*cs+.5,0);ctx.lineTo(i*cs+.5,h);ctx.stroke()}
   for(let i=0;i<=S.L;i++){ctx.strokeStyle=i%5===0?T.gridStrong:T.gridLine;ctx.beginPath();ctx.moveTo(0,i*cs+.5);ctx.lineTo(w,i*cs+.5);ctx.stroke()}
   if(mirror){ctx.strokeStyle=T.accent;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(w/2,0);ctx.lineTo(w/2,h);ctx.stroke();ctx.setLineDash([])}
+  {const cx=w/2,cz=h/2,r=Math.max(4,cs*.28);ctx.strokeStyle=T.accent;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(cx,cz,r,0,Math.PI*2);
+   ctx.moveTo(cx-r*1.7,cz);ctx.lineTo(cx+r*1.7,cz);ctx.moveTo(cx,cz-r*1.7);ctx.lineTo(cx,cz+r*1.7);ctx.stroke();ctx.lineWidth=1}
   if(hover){let fw=1,fl=1;if(tool==='paint'&&!TM[cur].hull){[fw,fl]=sizeOf(cur);if(curRy)[fw,fl]=[fl,fw]}
     const hx=Math.max(0,Math.min(hover.x,S.W-fw)),hz=Math.max(0,Math.min(hover.z,S.L-fl));
     ctx.strokeStyle=T.accent;ctx.lineWidth=2;ctx.strokeRect(hx*cs+1.5,hz*cs+1.5,fw*cs-3,fl*cs-3);
@@ -953,12 +960,21 @@ $('#zFit').onclick=()=>{zoomF=1;fitGrid();drawGrid()};
 $('#undo').onclick=undo;
 $('#dname').oninput=e=>{S.name=e.target.value;syncTitle();autosave()};
 $('#dcls').onchange=e=>{pushUndo();S.cls=e.target.value;updateInfo();syncUI();syncTitle();autosave()};
+document.querySelectorAll('[data-dim]').forEach(b=>b.onclick=()=>{const i=$('#'+b.dataset.dim),mn=+i.min,mx=+i.max;
+  i.value=Math.max(mn,Math.min(mx,(parseInt(i.value)||mn)+ +b.dataset.step))});
+/* Raster um die Mitte vergrößern/verkleinern */
+function resizeCentered(W,L,H){
+  const dx=Math.trunc((W-S.W)/2),dy=Math.trunc((H-S.H)/2),dz=Math.trunc((L-S.L)/2);
+  const old=[];S.blocks.forEach((v,k)=>old.push([P3(k),v]));
+  const n=blank(S.name,S.cls,W,L,H),prev=S;S=n;let lost=0;
+  for(const [[x,y,z],v] of old){const nx=x+dx,ny=y+dy,nz=z+dz,[w,h,l]=dims(v);
+    if(nx<0||ny<0||nz<0||nx+w>W||ny+h>H||nz+l>L){lost++;continue}putAnchor(K(nx,ny,nz),v)}
+  S=n;layer=clamp(layer+dy,0,H-1);return {lost,changed:prev.W!==W||prev.L!==L||prev.H!==H}}
 $('#resize').onclick=()=>{
   const W=clamp($('#dw').value,3,MAXD),L=clamp($('#dl').value,3,MAXD),H=clamp($('#dh').value,1,MAXD);
-  const out=[];S.blocks.forEach((v,k)=>{const [x,y,z]=P3(k),[w,h,l]=dims(v);if(x+w>W||y+h>H||z+l>L)out.push(k)});
-  pushUndo();out.forEach(delAnchor);
-  S.W=W;S.L=L;S.H=H;layer=Math.min(layer,H-1);syncFields();full();resetView();autosave();closeProps();
-  toast(out.length?`Raster geändert, ${out.length} Teile außerhalb entfernt`:'Raster geändert');
+  pushUndo();const odd=(W-S.W)%2!==0;const r=resizeCentered(W,L,H);
+  syncFields();full();resetView();autosave();closeProps();
+  toast(r.lost?`Raster geändert, ${r.lost} Teile außerhalb entfernt`:odd?'Raster geändert – ungerade Breitenänderung: die Mittelachse liegt jetzt einen halben Block versetzt':'Raster rundherum geändert');
 };
 $('#newBtn').onclick=()=>openModal('newModal');
 $('#newYes').onclick=()=>{load(blank('Neues Design',S.cls,S.W,S.L,S.H));setLayer(0);closeModal('newModal');toast('Leeres Design angelegt')};
