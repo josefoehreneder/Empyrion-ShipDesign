@@ -167,6 +167,17 @@ h2{font-family:var(--f-display);font-weight:700;font-size:.9rem;letter-spacing:.
 .rotbox{display:grid;grid-template-columns:92px minmax(0,1fr);gap:10px;align-items:center}
 #rotPrev{width:92px;height:92px;border-radius:6px;background:var(--view-bg);display:block}
 .rotbtns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.orbox{display:flex;flex-direction:column;gap:8px}
+.orrow{display:flex;flex-direction:column;gap:4px}
+.orgrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px}
+.orgrid .btn{flex-direction:column;gap:0;min-height:46px;padding:4px 2px;font-size:.66rem;font-weight:600}
+.orgrid .btn b{font-size:1.05rem;line-height:1.1}
+.orgrid .btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.orfoot{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center}
+.viewhint{position:absolute;left:8px;top:8px;right:8px;margin:0;pointer-events:none;font-size:.72rem;color:var(--muted);text-shadow:0 0 4px var(--view-bg)}
+.viewmode{position:absolute;right:8px;bottom:8px;display:flex;gap:4px}
+.viewmode button{height:34px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);font-size:.75rem;font-weight:700}
+.viewmode button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .rotname{font-weight:700;margin:0}
 .dirs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .dirs .btn{flex-direction:column;min-height:58px;gap:0}
@@ -278,7 +289,9 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
     </section>
     <aside class="side">
       <section class="pane viewpane" aria-label="3D-Vorschau">
-        <div class="viewwrap" id="viewwrap"><canvas id="view" aria-label="3D-Ansicht des Designs"></canvas></div>
+        <div class="viewwrap" id="viewwrap"><canvas id="view" aria-label="3D-Ansicht des Designs. Tippen bearbeitet, Ziehen dreht."></canvas>
+          <p class="viewhint" id="viewHint"></p>
+          <div class="viewmode" role="group" aria-label="3D-Bearbeitung"><button id="v3edit" aria-pressed="true">Bearbeiten</button><button id="v3look" aria-pressed="false">Nur ansehen</button></div></div>
         <div class="vopts">
           <label class="chk"><input type="checkbox" id="hideAbove"> Ebenen darüber ausblenden</label>
           <button class="btn" id="resetView">Ansicht zurücksetzen</button>
@@ -288,7 +301,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
         <div class="meta" id="meta"></div>
         <div><h2>Prüfliste</h2><ul class="checks" id="checks"></ul></div>
         <div><h2>Stückliste</h2><table class="bom" id="bom"></table></div>
-        <p class="hint keys">Tastatur: <kbd>B</kbd> Blöcke · <kbd>Q</kbd>/<kbd>E</kbd> Ebene · <kbd>R</kbd> drehen · <kbd>T</kbd> kippen · <kbd>F</kbd> rollen · <kbd>M</kbd> spiegeln · <kbd>Strg</kbd>+<kbd>Z</kbd> rückgängig · Rechtsklick löscht</p>
+        <p class="hint keys">Tastatur: <kbd>B</kbd> Blöcke · <kbd>Q</kbd>/<kbd>E</kbd> Ebene · <kbd>R</kbd> waagrecht drehen · <kbd>T</kbd> kippen · <kbd>F</kbd> rollen · <kbd>M</kbd> spiegeln · <kbd>Strg</kbd>+<kbd>Z</kbd> rückgängig · Rechtsklick löscht</p>
       </section>
     </aside>
   </main>
@@ -328,17 +341,14 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shapeTitle">
     <div class="shead"><span class="sw" id="shapeSw"></span><h3 id="shapeTitle">Form wählen</h3><button class="ib" data-close="shapeModal" aria-label="Schließen">✕</button></div>
     <div class="shapes" id="shapeGrid"></div>
-    <div class="rotbox">
-      <canvas id="rotPrev" aria-label="Vorschau der Lage"></canvas>
-      <div>
-        <p class="rotname" id="rotName"></p>
-        <div class="rotbtns">
-          <button class="btn" id="rY">↻ Drehen</button>
-          <button class="btn" id="rX">⤵ Kippen</button>
-          <button class="btn" id="rZ">⟲ Rollen</button>
-          <button class="btn" id="r0">Gerade</button>
-        </div>
+    <div class="orbox">
+      <div class="orfoot">
+        <canvas id="rotPrev" aria-label="Vorschau der Lage mit Pfeil nach vorne"></canvas>
+        <div><p class="rotname" id="rotName"></p><p class="hint">Der Pfeil zeigt zum Bug (vorne), wie im Raster oben.</p></div>
       </div>
+      <div class="orrow"><span class="lbl">Zeigt nach</span><div class="orgrid" id="faceGrid"></div></div>
+      <div class="orrow"><span class="lbl">Oberseite</span><div class="orgrid" id="upGrid"></div></div>
+      <button class="btn" id="r0">Zurücksetzen (zeigt nach vorne, Oberseite oben)</button>
     </div>
     <button class="btn primary" data-close="shapeModal">Fertig</button>
   </div>
@@ -474,6 +484,14 @@ const ROTS=[[[1,0,0],[0,1,0],[0,0,1]]];
 for(let i=0;i<ROTS.length;i++)for(const G of [RY,RX]){const N=mul(G,ROTS[i]);if(!ROTS.some(M=>M.flat().join()===N.flat().join()))ROTS.push(N)}
 const rIdx=M=>ROTS.findIndex(X=>X.flat().join()===M.flat().join());
 const ROT_Y=ROTS.map(M=>rIdx(mul(RY,M))),ROT_X=ROTS.map(M=>rIdx(mul(RX,M))),ROT_Z=ROTS.map(M=>rIdx(mul(RZ,M)));
+/* Ausrichtung: Grundlage ist „zeigt nach vorne, Oberseite oben“ */
+const SD={f:{n:'Vorne',a:'↑',v:[0,0,-1]},b:{n:'Hinten',a:'↓',v:[0,0,1]},l:{n:'Links',a:'←',v:[-1,0,0]},r:{n:'Rechts',a:'→',v:[1,0,0]},u:{n:'Oben',a:'⊙',v:[0,1,0]},d:{n:'Unten',a:'⊗',v:[0,-1,0]}};
+const SDO=['f','b','l','r','u','d'];
+const mv=(M,v)=>[0,1,2].map(i=>M[i][0]*v[0]+M[i][1]*v[1]+M[i][2]*v[2]);
+const dirKey=v=>SDO.find(k=>SD[k].v.every((c,i)=>c===Math.round(v[i])));
+const faceOf=r=>dirKey(mv(ROTS[r],SD.f.v)),upOf=r=>dirKey(mv(ROTS[r],SD.u.v));
+const rotFor=(f,u)=>ROTS.findIndex((M,i)=>faceOf(i)===f&&upOf(i)===u);
+const perp=(a,b)=>SD[a].v.every((c,i)=>c*SD[b].v[i]===0);
 const rotP=(M,p)=>{const q=[p[0]-.5,p[1]-.5,p[2]-.5];return [0,1,2].map(i=>M[i][0]*q[0]+M[i][1]*q[1]+M[i][2]*q[2]+.5)};
 
 /* Konvexe Hülle → Flächen */
@@ -601,8 +619,11 @@ function boxFaces(x0,y0,z0,x1,y1,z1){const X=[x0,x1],Y=[y0,y1],Z=[z0,z1],out=[];
 
 /* Symbole der Formen */
 function drawIcon(cv,s,r,rgb,px){const dpr=window.devicePixelRatio||1;cv.width=px*dpr;cv.height=px*dpr;const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,px,px);
-  const cam=makeCam([2.15,1.95,-1.75],[.5,.42,.5],px,30);
-  renderFaces(ctx,geo(s,r).faces.map(f=>({n:f.n,pts:f.pts,c:f.c,rgb})),cam,px,px,.8)}
+  const big=px>=80,cam=big?makeCam([2.35,2.6,2.5],[.5,.2,.05],px,40):makeCam([2.2,2.4,2.0],[.5,.42,.5],px,30);
+  renderFaces(ctx,geo(s,r).faces.map(f=>({n:f.n,pts:f.pts,c:f.c,rgb})),cam,px,px,.8);
+  if(big){const P=projector(cam,px,px),a=P([.5,0,-.15]),b=P([.5,0,-1.05]),l1=P([.32,0,-.8]),l2=P([.68,0,-.8]);
+    if(a&&b&&l1&&l2){ctx.strokeStyle=T.accent;ctx.fillStyle=T.accent;ctx.lineWidth=2.5;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(...a);ctx.lineTo(...b);ctx.moveTo(...l1);ctx.lineTo(...b);ctx.lineTo(...l2);ctx.stroke();
+      ctx.font='700 10px system-ui,sans-serif';ctx.textAlign='center';ctx.fillText('VORNE',b[0],b[1]-6)}}}
 
 /* ---------- Seitenleiste, Pop-ups, Werkzeugleiste ---------- */
 const shell=$('#shell');
@@ -640,7 +661,12 @@ function renderShapeGrid(){
   $('#dirGrid').innerHTML=DORDER.map(k=>`<button class="btn" data-d="${k}"><b>${DIRS[k].a}</b>${DIRS[k].n}</button>`).join('');
   $('#dirGrid').querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{curDir=b.dataset.d;cur='thruster';syncUI()});
 }
-$('#rY').onclick=()=>rotHull(ROT_Y);$('#rX').onclick=()=>rotHull(ROT_X);$('#rZ').onclick=()=>rotHull(ROT_Z);$('#r0').onclick=()=>{curRot=0;syncUI()};
+$('#faceGrid').innerHTML=SDO.map(k=>`<button class="btn" data-face="${k}"><b>${SD[k].a}</b>${SD[k].n}</button>`).join('');
+$('#upGrid').innerHTML=SDO.map(k=>`<button class="btn" data-up="${k}"><b>${SD[k].a}</b>${SD[k].n}</button>`).join('');
+$('#faceGrid').querySelectorAll('[data-face]').forEach(b=>b.onclick=()=>{const f=b.dataset.face,u0=upOf(curRot);
+  const u=perp(f,u0)?u0:['u','b','f','r','l','d'].find(k=>perp(f,k));curRot=rotFor(f,u);if(!TM[cur].hull)cur=lastHull;syncUI()});
+$('#upGrid').querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>{const u=b.dataset.up,f=faceOf(curRot);if(!perp(f,u))return;curRot=rotFor(f,u);if(!TM[cur].hull)cur=lastHull;syncUI()});
+$('#r0').onclick=()=>{curRot=0;syncUI()};
 function rotHull(tab){curRot=tab[curRot];if(!TM[cur].hull)cur=lastHull;syncUI()}
 let iconMat='';
 function syncUI(){
@@ -654,13 +680,15 @@ function syncUI(){
   document.querySelectorAll('#shapeGrid [data-s]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.s===curShape));
   $('#shapeTitle').textContent=mat.n+' · Form';$('#shapeSw').style.background=mat.c;$('#shapeSw').style.color=ink(mat.c);$('#shapeSw').textContent=mat.k;
   drawIcon($('#rotPrev'),curShape,curRot,mat.rgb,92);
-  $('#rotName').textContent=SM[curShape].n+(curRot?' · gedreht':' · gerade');
+  {const f=faceOf(curRot),u=upOf(curRot);$('#rotName').textContent=`${SM[curShape].n} · zeigt nach ${SD[f].n}, Oberseite ${SD[u].n}`;
+   document.querySelectorAll('#faceGrid [data-face]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.face===f));
+   document.querySelectorAll('#upGrid [data-up]').forEach(b=>{b.setAttribute('aria-pressed',b.dataset.up===u);b.disabled=!perp(f,b.dataset.up)})}
   document.querySelectorAll('#dirGrid [data-d]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.d===curDir));
   // Werkzeugleiste
   $('#chipSw').style.background=t.c;$('#chipSw').style.color=ink(t.c);$('#chipSw').textContent=t.dir?DIRS[curDir].a:t.k;
   $('#chipName').textContent=t.n;
   let [w,l,h]=t.hull?[1,1,1]:sizeOf(cur);if(curRy)[w,l]=[l,w];
-  $('#chipSub').textContent=t.hull?SM[curShape].n:t.dir?`Schub ${DIRS[curDir].n} · ${w}×${l}×${h}`:`${w} × ${l} × ${h} Blöcke`;
+  $('#chipSub').textContent=t.hull?SM[curShape].n+(curRot?' · '+SD[faceOf(curRot)].n:''):t.dir?`Schub ${DIRS[curDir].n} · ${w}×${l}×${h}`:`${w} × ${l} × ${h} Blöcke`;
   const c=$('#ctxBtn');
   if(t.hull){c.innerHTML='<canvas></canvas><span>Form</span>';c.setAttribute('aria-label','Form und Drehung wählen');drawIcon(c.querySelector('canvas'),curShape,curRot,t.rgb,28);c.disabled=false}
   else if(t.dir){c.innerHTML=`<span class="big">${DIRS[curDir].a}</span><span>Richtung</span>`;c.setAttribute('aria-label','Schubrichtung wählen');c.disabled=false}
@@ -668,7 +696,7 @@ function syncUI(){
 }
 const syncPalette=syncUI;
 $('#ctxBtn').onclick=()=>{const t=TM[cur];if(t.hull)openModal('shapeModal');else if(t.dir)openModal('dirModal');else{curRy^=1;syncUI();toast('Gerät gedreht')}};
-function setTool(t){tool=t;document.querySelectorAll('[data-tool]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===t));grid.classList.toggle('pan',t==='pan')}
+function setTool(t){tool=t;document.querySelectorAll('[data-tool]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===t));grid.classList.toggle('pan',t==='pan');if(typeof syncViewHint==='function')syncViewHint()}
 function setMirror(v){mirror=v;$('#mirrorBtn').classList.toggle('on',v);$('#mirrorBtn').setAttribute('aria-pressed',v);drawGrid()}
 $('#mirrorBtn').onclick=()=>{setMirror(!mirror);toast(mirror?'Spiegeln an':'Spiegeln aus')};
 /* ---------- 2D-Raster ---------- */
@@ -720,11 +748,16 @@ function mirrorVal(v){const m={...v};if(m.d)m.d=m.d==='l'?'r':m.d==='r'?'l':m.d;
   if(TM[m.t].hull){const r2=mirrorRot(m.s||'cube',m.r||0);if(r2)m.r=r2;else delete m.r}return m}
 function placeAt(x,y,z,v){const [w,h,l]=dims(v);x=Math.min(x,S.W-w);y=Math.min(y,S.H-h);z=Math.min(z,S.L-l);if(x<0||y<0||z<0)return null;putAnchor(K(x,y,z),v);return [x,y,z]}
 function eraseCell(x,y,z){const a=S.occ.get(K(x,y,z));if(a)delAnchor(a)}
-function applyAt(x,z,mode){
-  if(mode==='erase'){eraseCell(x,layer,z);const mx=S.W-1-x;if(mirror&&mx!==x)eraseCell(mx,layer,z);return}
-  const v=makeVal(),p=placeAt(x,layer,z,v);if(!p){toast('Das Gerät ist größer als das Raster.');return}
+function applyAt3(x,y,z,mode){
+  if(mode==='erase'){eraseCell(x,y,z);const mx=S.W-1-x;if(mirror&&mx!==x)eraseCell(mx,y,z);return true}
+  const v=makeVal(),p=placeAt(x,y,z,v);if(!p){toast('Das Gerät ist größer als das Raster.');return false}
   if(mirror){const w=dims(v)[0],mx=S.W-p[0]-w;if(mx>=p[0]+w||mx+w<=p[0])placeAt(mx,p[1],p[2],mirrorVal(v))}
+  return true
 }
+function applyAt(x,z,mode){applyAt3(x,layer,z,mode)}
+function pickAt(x,y,z){const o=at(x,y,z);if(!o)return;const v=o.v,t=TM[v.t];cur=v.t;
+  if(t.hull){lastHull=v.t;curShape=v.s||'cube';curRot=v.r||0}else{if(v.d)curDir=v.d;curRy=(v.w||1)!==sizeOf(v.t)[0]&&(v.w||1)===sizeOf(v.t)[1]?1:0}
+  syncUI();setTool('paint');toast(t.n+(t.hull?' · '+SM[v.s||'cube'].n:'')+' gewählt')}
 const isBig=()=>{if(TM[cur].hull)return false;const s=sizeOf(cur);return s[0]*s[1]*s[2]>1};
 grid.addEventListener('contextmenu',e=>e.preventDefault());
 grid.addEventListener('pointerdown',e=>{
@@ -736,9 +769,7 @@ grid.addEventListener('pointerdown',e=>{
     grid.addEventListener('pointermove',mv);grid.addEventListener('pointerup',upf);return}
   e.preventDefault();
   const mode=e.button===2?'erase':tool;
-  if(mode==='pick'){const o=at(p.x,layer,p.z);if(o){const v=o.v,t=TM[v.t];cur=v.t;
-      if(t.hull){lastHull=v.t;curShape=v.s||'cube';curRot=v.r||0}else{if(v.d)curDir=v.d;curRy=(v.w||1)!==sizeOf(v.t)[0]&&(v.w||1)===sizeOf(v.t)[1]?1:0}
-      syncUI();setTool('paint');toast(t.n+(t.hull?' · '+SM[v.s||'cube'].n:'')+' gewählt')}return}
+  if(mode==='pick'){pickAt(p.x,layer,p.z);return}
   grid.setPointerCapture(e.pointerId);pushUndo();painting={mode,last:p.x+','+p.z,single:mode==='paint'&&isBig()};applyAt(p.x,p.z,mode);dirty();
 });
 grid.addEventListener('pointermove',e=>{const p=cellAt(e);
@@ -758,7 +789,7 @@ function setLayer(l){layer=clamp(l,0,S.H-1);
   $('#lout').innerHTML=`<small>Ebene</small>${layer+1}/${S.H}`;$('#ldown').disabled=layer<=0;$('#lup').disabled=layer>=S.H-1;drawGrid();render3D();autosave()}
 
 /* ---------- 3D-Vorschau ---------- */
-const view=$('#view'),V={th:.75,ph:1.0,rad:30,raf:0};
+const view=$('#view'),V={th:.75,ph:1.0,rad:30,raf:0,cam:null,W:0,H:0,hover:null,edit:true};
 function render3D(){if(V.raf)return;V.raf=requestAnimationFrame(()=>{V.raf=0;draw3D()})}
 function sceneFaces(){
   const faces=[],wx=S.W/2,wy=S.H/2,wz=S.L/2,Wd=p=>[p[0]-wx,p[1]-wy,p[2]-wz];
@@ -777,23 +808,70 @@ function draw3D(){
   if(view.width!==Math.round(W*dpr)||view.height!==Math.round(H*dpr)){view.width=Math.round(W*dpr);view.height=Math.round(H*dpr)}
   const ctx=view.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=T.viewBg;ctx.fillRect(0,0,W,H);
   const {th,ph,rad}=V,C=[rad*Math.sin(ph)*Math.sin(th),rad*Math.cos(ph),rad*Math.sin(ph)*Math.cos(th)];
-  const cam=makeCam(C,[0,0,0],H,38);renderFaces(ctx,sceneFaces(),cam,W,H,.7);
+  const cam=makeCam(C,[0,0,0],H,38);V.cam=cam;V.W=W;V.H=H;renderFaces(ctx,sceneFaces(),cam,W,H,.7);
   const P=projector(cam,W,H),y=layer-S.H/2,hx=S.W/2,hz=S.L/2;
   const ring=[[-hx,y,-hz],[hx,y,-hz],[hx,y,hz],[-hx,y,hz]].map(P),bow=[[-.7,y,-hz-.4],[0,y,-hz-1.5],[.7,y,-hz-.4]].map(P);
   ctx.strokeStyle=T.accent;ctx.lineWidth=1.5;
   if(!ring.some(p=>!p)){poly(ctx,ring);ctx.stroke()}
   if(!bow.some(p=>!p)){ctx.beginPath();ctx.moveTo(...bow[0]);ctx.lineTo(...bow[1]);ctx.lineTo(...bow[2]);ctx.stroke()}
+  if(V.hover){const [x0,y0,z0,x1,y1,z1]=V.hover.box,c=[[x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1],[x0,y1,z0],[x1,y1,z0],[x1,y1,z1],[x0,y1,z1]].map(q=>P([q[0]-hx,q[1]-S.H/2,q[2]-hz]));
+    if(!c.some(q=>!q)){ctx.strokeStyle=V.hover.erase?T.fg:T.accent;ctx.lineWidth=2;ctx.setLineDash(V.hover.erase?[4,3]:[]);ctx.beginPath();
+      for(const [a,b] of [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]]){ctx.moveTo(...c[a]);ctx.lineTo(...c[b])}ctx.stroke();ctx.setLineDash([])}}
 }
+/* Strahl durch das Raster: welcher Block bzw. welches freie Feld liegt unter dem Finger */
+function pick3D(px,py){const cam=V.cam;if(!cam)return null;
+  const B=[S.W,S.H,S.L],O=[cam.C[0]+S.W/2,cam.C[1]+S.H/2,cam.C[2]+S.L/2];
+  const d=norm([0,1,2].map(i=>cam.f[i]*cam.F+cam.r[i]*(px-V.W/2)-cam.u[i]*(py-V.H/2)));
+  const solid=(x,y,z)=>{if(hideAbove&&y>layer)return false;return S.occ.has(K(x,y,z))};
+  let t0=0,t1=Infinity,ax=-1;
+  for(let i=0;i<3;i++){if(Math.abs(d[i])<1e-9){if(O[i]<0||O[i]>B[i]){t1=-1;break}continue}
+    const ta=(0-O[i])/d[i],tb=(B[i]-O[i])/d[i],lo=Math.min(ta,tb),hi=Math.max(ta,tb);if(lo>t0){t0=lo;ax=i}t1=Math.min(t1,hi)}
+  if(t0<=t1){const p=O.map((o,i)=>o+d[i]*(t0+1e-6)),c=p.map((v,i)=>Math.max(0,Math.min(B[i]-1,Math.floor(v))));
+    const st=d.map(v=>v>0?1:-1),tM=d.map((v,i)=>Math.abs(v)<1e-9?Infinity:((v>0?c[i]+1:c[i])-O[i])/v),tD=d.map(v=>Math.abs(v)<1e-9?Infinity:Math.abs(1/v));
+    let last=ax;
+    for(let n=0;n<600;n++){
+      if(solid(c[0],c[1],c[2])){const nn=[0,0,0];if(last>=0)nn[last]=-st[last];return {cell:c.slice(),n:last>=0?nn:null}}
+      const i=tM[0]<tM[1]?(tM[0]<tM[2]?0:2):(tM[1]<tM[2]?1:2);if(tM[i]>t1)break;c[i]+=st[i];tM[i]+=tD[i];last=i;
+      if(c[i]<0||c[i]>=B[i])break}}
+  if(Math.abs(d[1])>1e-9){const t=(layer-O[1])/d[1];if(t>0){const x=Math.floor(O[0]+d[0]*t),z=Math.floor(O[2]+d[2]*t);if(x>=0&&z>=0&&x<S.W&&z<S.L)return {cell:[x,layer,z],ground:true}}}
+  return null}
+function target3D(hit,mode){if(!hit)return null;
+  if(mode==='paint'){if(hit.ground)return hit.cell;if(!hit.n)return null;const c=hit.cell.map((v,i)=>v+hit.n[i]);
+    if(c[0]<0||c[1]<0||c[2]<0||c[0]>=S.W||c[1]>=S.H||c[2]>=S.L)return 'out';return c}
+  return hit.ground?null:hit.cell}
+function hover3D(px,py){const mode=tool==='pan'||!V.edit?null:tool,hit=mode?pick3D(px,py):null,c=hit&&target3D(hit,mode);let h=null;
+  if(Array.isArray(c)){if(mode==='paint'){let [w,l,hh]=TM[cur].hull?[1,1,1]:sizeOf(cur);if(!TM[cur].hull&&curRy)[w,l]=[l,w];
+      const x=Math.max(0,Math.min(c[0],S.W-w)),y=Math.max(0,Math.min(c[1],S.H-hh)),z=Math.max(0,Math.min(c[2],S.L-l));h={box:[x,y,z,x+w,y+hh,z+l]}}
+    else{const o=at(c[0],c[1],c[2]);if(o){const [x,y,z]=P3(o.k),[w,hh,l]=dims(o.v);h={box:[x,y,z,x+w,y+hh,z+l],erase:mode==='erase'}}}}
+  if(JSON.stringify(V.hover)!==JSON.stringify(h)){V.hover=h;render3D()}}
+function edit3D(px,py,mode){const hit=pick3D(px,py),c=target3D(hit,mode);
+  if(c==='out'){toast('Dort ist das Raster zu Ende – vergrößere es in den Grundeinstellungen.');return}
+  if(!c){if(mode==='paint')toast('Tippe auf einen Block oder auf die markierte Ebene.');return}
+  if(mode==='pick'){pickAt(c[0],c[1],c[2]);return}
+  pushUndo();applyAt3(c[0],c[1],c[2],mode);if(undoStack[undoStack.length-1]===snap())undoStack.pop();syncUndo();dirty()}
+function syncViewHint(){$('#v3edit').setAttribute('aria-pressed',V.edit);$('#v3look').setAttribute('aria-pressed',!V.edit);
+  $('#viewHint').textContent=!V.edit||tool==='pan'?'Ziehen dreht · zwei Finger oder Mausrad zoomen':
+    tool==='paint'?'Tippen setzt einen Block an die Fläche · Ziehen dreht':tool==='erase'?'Tippen löscht den Block · Ziehen dreht':'Tippen nimmt den Block auf · Ziehen dreht'}
 function resetView(){V.th=.75;V.ph=1.0;V.rad=Math.max(S.W,S.L,S.H)*1.9+4;render3D()}
-(function(){const pts=new Map();let pinch=0;
-  view.addEventListener('pointerdown',e=>{view.setPointerCapture(e.pointerId);pts.set(e.pointerId,{x:e.clientX,y:e.clientY})});
-  view.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId))return;const p=pts.get(e.pointerId);
+(function(){const pts=new Map();let pinch=0,start=null,moved=0,multi=false;
+  const loc=e=>{const r=view.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top]};
+  view.addEventListener('contextmenu',e=>e.preventDefault());
+  view.addEventListener('pointerdown',e=>{view.setPointerCapture(e.pointerId);pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pts.size===1){start={x:e.clientX,y:e.clientY,btn:e.button};moved=0;multi=false}else multi=true});
+  view.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId)){if(e.pointerType==='mouse'){const [x,y]=loc(e);hover3D(x,y)}return}const p=pts.get(e.pointerId);
+    if(start&&pts.size===1)moved=Math.max(moved,Math.hypot(e.clientX-start.x,e.clientY-start.y));
+    if(pts.size===1&&moved<6)return;
+    V.hover=null;
     if(pts.size===1){V.th-=(e.clientX-p.x)*.008;V.ph=Math.max(.08,Math.min(Math.PI-.08,V.ph-(e.clientY-p.y)*.008))}
     pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(pts.size===2){const [a,b]=[...pts.values()],d=Math.hypot(a.x-b.x,a.y-b.y);if(pinch)V.rad=Math.max(4,Math.min(400,V.rad*pinch/d));pinch=d}
     render3D()});
-  const up=e=>{pts.delete(e.pointerId);if(pts.size<2)pinch=0};
+  const up=e=>{const was=pts.has(e.pointerId);pts.delete(e.pointerId);if(pts.size<2)pinch=0;
+    if(e.type==='pointerup'&&was&&pts.size===0&&start&&!multi&&moved<6&&V.edit&&tool!=='pan'){const [x,y]=loc(e);edit3D(x,y,start.btn===2?'erase':tool);if(e.pointerType==='mouse')hover3D(x,y)}
+    if(pts.size===0)start=null};
   view.addEventListener('pointerup',up);view.addEventListener('pointercancel',up);
+  view.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'&&V.hover&&!pts.size){V.hover=null;render3D()}});
+  $('#v3edit').onclick=()=>{V.edit=true;syncViewHint()};$('#v3look').onclick=()=>{V.edit=false;V.hover=null;syncViewHint();render3D()};
   view.addEventListener('wheel',e=>{e.preventDefault();V.rad=Math.max(4,Math.min(400,V.rad*(e.deltaY>0?1.1:.9)));render3D()},{passive:false});
   new ResizeObserver(render3D).observe($('#viewwrap'));
 })();
@@ -958,7 +1036,7 @@ const st=store();
 if(st.sizes&&st.sizes.small&&st.sizes.large)SZ=st.sizes;
 try{S=st.last?deserialize(st.last):null}catch(e){S=null}
 if(!S){S=sample();layer=2}else layer=clamp(st.layer||0,0,S.H-1);
-renderDrawer();renderShapeGrid();
+renderDrawer();renderShapeGrid();syncViewHint();
 syncFields();full();resetView();syncUndo();syncUI();
 
 if(IS_APP&&'serviceWorker' in navigator&&location.protocol.startsWith('http')){
