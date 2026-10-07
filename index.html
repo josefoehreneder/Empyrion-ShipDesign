@@ -176,6 +176,10 @@ h2{font-family:var(--f-display);font-weight:700;font-size:.9rem;letter-spacing:.
 .orgrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px}
 .orgrid .btn{flex-direction:column;gap:0;min-height:46px;padding:4px 2px;font-size:.66rem;font-weight:600}
 .orgrid .btn b{font-size:1.05rem;line-height:1.1}
+.orgrid.sizes{grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}
+.orgrid.sizes .btn b{font-family:var(--f-mono);font-size:.95rem}
+.blk.na{opacity:.45;cursor:not-allowed}
+.blk.na .tagsz{color:var(--err)}
 .orgrid .btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .orfoot{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center}
 .viewhint{position:absolute;left:8px;top:8px;right:8px;margin:0;pointer-events:none;font-size:.72rem;color:var(--muted);text-shadow:0 0 4px var(--view-bg)}
@@ -366,8 +370,19 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dirTitle">
     <div class="shead"><span class="sw" style="background:#ea8538;color:#11171e">↑</span><h3 id="dirTitle">Schubrichtung</h3><button class="ib" data-close="dirModal" aria-label="Schließen">✕</button></div>
     <div class="dirs" id="dirGrid"></div>
-    <p class="hint">Richtung, in die die Düse das Schiff schiebt. Die Düsenöffnung zeigt in die Gegenrichtung.</p>
+    <p class="hint">Richtung, in die die Düse das Schiff schiebt. Die Düsenöffnung zeigt in die Gegenrichtung. Die Düse liegt längs zur Schubrichtung.</p>
+    <div class="orrow" id="dirSizeRow"><span class="lbl">Größe (B × H × L)</span><div class="orgrid sizes" id="dirSizes"></div></div>
     <button class="btn primary" data-close="dirModal">Fertig</button>
+  </div>
+</div>
+
+<div class="modal" id="sizeModal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sizeTitle">
+    <div class="shead"><span class="sw" id="sizeSw"></span><h3 id="sizeTitle">Größe</h3><button class="ib" data-close="sizeModal" aria-label="Schließen">✕</button></div>
+    <div class="orrow"><span class="lbl">Größe in Blöcken (B × H × L, wie im Spiel)</span><div class="orgrid sizes" id="sizeGrid"></div></div>
+    <p class="msg" id="sizeInfo"></p>
+    <div class="row"><button class="btn" id="szRot">↻ Um 90° drehen</button><button class="btn" id="szEdit">Größen bearbeiten</button></div>
+    <button class="btn primary" data-close="sizeModal">Fertig</button>
   </div>
 </div>
 
@@ -390,9 +405,9 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
 <div class="modal" id="szModal" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="szTitle">
     <div class="shead"><h3 id="szTitle">Gerätegrößen</h3><button class="ib" data-close="szModal" aria-label="Schließen">✕</button></div>
-    <p class="msg">Wie viele Blöcke ein Gerät im Spiel belegt (Breite × Länge × Höhe). Klein gilt für SV und HV, groß für CV und BA. Bereits gesetzte Geräte behalten ihre Größe.</p>
+    <p class="msg">Wie viele Blöcke ein Gerät belegt, wie im Spiel als <b>Breite × Höhe × Länge</b>. Mehrere Größen mit Komma trennen, z. B. „1x1x1, 3x3x3“. Vorgabe ist deine Blockliste; geänderte Felder sind orange umrandet. Bereits gesetzte Geräte behalten ihre Größe.</p>
     <div class="sztable"><table id="szTable"></table></div>
-    <div class="row"><button class="btn" id="szReset">Alle auf 1 × 1 × 1</button><p class="msg" id="szMsg" aria-live="polite"></p></div>
+    <div class="row"><button class="btn" id="szReset">Alle wie in der Blockliste</button><p class="msg" id="szMsg" aria-live="polite"></p></div>
   </div>
 </div>
 
@@ -437,27 +452,48 @@ const IS_APP=!!document.querySelector('link[rel="manifest"]');
 const TYPES=[
   {id:'steel',n:'Stahlblock',g:'Hülle',c:'#8b97a4',k:'S'},
   {id:'hsteel',n:'Gehärteter Stahl',g:'Hülle',c:'#5e6d7c',k:'H'},
-  {id:'csteel',n:'Kampfstahl',g:'Hülle',c:'#3d4956',k:'K'},
-  {id:'carbon',n:'Carbonblock',g:'Hülle',c:'#4a4744',k:'Cb'},
+  {id:'csteel',n:'Kampfstahl (Combat)',g:'Hülle',c:'#3d4956',k:'K'},
+  {id:'xsteel',n:'Xenostahl',g:'Hülle',c:'#6c6496',k:'X'},
+  {id:'carbon',n:'Carbon (Kohlefaser)',g:'Hülle',c:'#4a4744',k:'Cb'},
+  {id:'wood',n:'Holz',g:'Hülle',c:'#9a6b3f',k:'Hz'},
+  {id:'concrete',n:'Beton',g:'Hülle',c:'#a7a39a',k:'Be'},
   {id:'window',n:'Fenster',g:'Hülle',c:'#71b9dc',k:'F',a:.55},
-  {id:'core',n:'Kern',g:'Steuerung',c:'#e2c444',k:'◆'},
-  {id:'cockpit',n:'Cockpit',g:'Steuerung',c:'#4c9fdf',k:'C'},
-  {id:'generator',n:'Generator',g:'Energie',c:'#d8532b',k:'G'},
-  {id:'fuel',n:'Treibstofftank',g:'Energie',c:'#c98a2d',k:'T'},
-  {id:'o2',n:'Sauerstofftank',g:'Energie',c:'#58b4a7',k:'O'},
+  {id:'core',n:'Kern',g:'Steuerung & Energie',c:'#e2c444',k:'◆'},
+  {id:'cockpit',n:'Cockpit / Pilotensitz',g:'Steuerung & Energie',c:'#4c9fdf',k:'C'},
+  {id:'generator',n:'Generator',g:'Steuerung & Energie',c:'#d8532b',k:'G'},
+  {id:'fuel',n:'Treibstoff- / Pentaxidtank',g:'Steuerung & Energie',c:'#c98a2d',k:'T'},
+  {id:'o2',n:'Sauerstofftank',g:'Steuerung & Energie',c:'#58b4a7',k:'O'},
+  {id:'solar',n:'Solarpaneel',g:'Steuerung & Energie',c:'#2f5d8a',k:'So'},
   {id:'thruster',n:'Schubdüse',g:'Antrieb',c:'#ea8538',k:'',dir:true},
   {id:'rcs',n:'RCS',g:'Antrieb',c:'#b56ad8',k:'R'},
   {id:'hover',n:'Schwebetriebwerk',g:'Antrieb',c:'#7b80da',k:'V'},
   {id:'warp',n:'Warpantrieb',g:'Antrieb',c:'#8c58cf',k:'W'},
-  {id:'cargo',n:'Frachtbox',g:'Ausstattung',c:'#a6844e',k:'B'},
-  {id:'constructor',n:'Konstruktor',g:'Ausstattung',c:'#6a9a48',k:'Kn'},
-  {id:'shield',n:'Schildgenerator',g:'Ausstattung',c:'#47bfd6',k:'Sh'},
+  {id:'cargo',n:'Frachtbox / Container',g:'Logistik & Produktion',c:'#a6844e',k:'B'},
+  {id:'constructor',n:'Konstruktor',g:'Logistik & Produktion',c:'#6a9a48',k:'Kn'},
+  {id:'plot',n:'Nährboden',g:'Logistik & Produktion',c:'#5f8f3a',k:'Nb'},
+  {id:'food',n:'Lebensmittelprozessor / Kühlschrank',g:'Logistik & Produktion',c:'#d9a441',k:'Kü'},
+  {id:'medstation',n:'O2- / Med-Station',g:'Logistik & Produktion',c:'#e06c8c',k:'Md'},
+  {id:'clone',n:'Klonkammer / Sanitätsbett',g:'Logistik & Produktion',c:'#3f8fb5',k:'Kl'},
   {id:'door',n:'Tür / Rampe',g:'Ausstattung',c:'#9b7a62',k:'D'},
   {id:'light',n:'Licht',g:'Ausstattung',c:'#f1df86',k:'L'},
   {id:'gear',n:'Landebein',g:'Ausstattung',c:'#757e88',k:'Lb'},
-  {id:'weapon',n:'Waffe (fest)',g:'Waffen',c:'#c94a4a',k:'Wf'},
-  {id:'turret',n:'Geschützturm',g:'Waffen',c:'#9e3636',k:'Gt'},
+  {id:'shield',n:'Schildgenerator',g:'Waffen & Verteidigung',c:'#47bfd6',k:'Sh'},
+  {id:'weapon',n:'Feste Waffe',g:'Waffen & Verteidigung',c:'#c94a4a',k:'Wf'},
+  {id:'turret',n:'Geschützturm',g:'Waffen & Verteidigung',c:'#9e3636',k:'Gt'},
+  {id:'drill',n:'Bohrer / Multitool-Modul',g:'Waffen & Verteidigung',c:'#8a8f3a',k:'Bo'},
 ];
+/* Wo ein Block erlaubt ist (aus der Blockliste); fehlt ein Eintrag, ist er überall erlaubt */
+const np=o=>Object.assign(Object.create(null),o||{});
+const ALLOW=np({concrete:['BA'],solar:['BA'],cockpit:['CV','SV','HV'],rcs:['CV','SV','HV'],thruster:['CV','SV','HV'],hover:['HV'],warp:['CV','SV'],
+  plot:['BA','CV'],clone:['BA','CV'],weapon:['SV','HV','CV'],drill:['SV','HV']});
+const allowed=(t,cls)=>!ALLOW[t]||ALLOW[t].includes(cls);
+/* Gerätegrößen aus der Blockliste, wie im Spiel: Breite × Höhe × Länge */
+const DEF_SZ={
+  large:{generator:['1x1x1','3x3x3'],fuel:['1x1x1','1x2x1'],cockpit:['1x1x1'],thruster:['1x1x1','3x3x7'],warp:['3x3x5'],constructor:['2x2x2','3x3x3'],clone:['1x1x2'],shield:['2x2x2'],turret:['3x3x3'],weapon:['1x1x1']},
+  small:{generator:['1x1x1','1x2x1'],cockpit:['1x1x2','3x1x3'],thruster:['1x1x1','1x1x3'],hover:['1x1x1','2x1x2'],warp:['1x1x2'],constructor:['1x1x2','1x2x1'],shield:['1x1x1'],weapon:['1x1x3','1x1x4'],turret:['1x1x1','2x2x2'],drill:['1x1x3','1x1x4']}};
+const parseSizes=str=>{const out=[],re=/(\d+)\s*[x×*]\s*(\d+)\s*[x×*]\s*(\d+)/gi;let m;while((m=re.exec(String(str))))out.push([m[1],m[2],m[3]].map(n=>Math.max(1,Math.min(16,+n))));return out};
+for(const g in DEF_SZ){DEF_SZ[g]=np(DEF_SZ[g]);for(const t in DEF_SZ[g])DEF_SZ[g][t]=parseSizes(DEF_SZ[g][t].join(','))}
+const fmtSz=a=>a.join('×');
 const TM=Object.create(null);
 TYPES.forEach(t=>{const n=parseInt(t.c.slice(1),16);t.rgb=[n>>16,n>>8&255,n&255];t.hull=t.g==='Hülle';TM[t.id]=t});
 const DEVICES=TYPES.filter(t=>!t.hull);
@@ -555,7 +591,7 @@ function mirrorRot(s,r){const key=s+'|'+r;if(MIR.has(key))return MIR.get(key);
 
 /* ---------- Zustand ---------- */
 let S=null, layer=0, cur='steel', lastHull='steel', curDir='f', curShape='cube', curRot=0, curRy=0, tool='paint', mirror=true, hideAbove=false;
-let hover=null, painting=null, CELL=20, zoomF=1, undoStack=[], raf=0, saveT=0, T={}, SZ={small:{},large:{}};
+let hover=null, painting=null, CELL=20, zoomF=1, undoStack=[], raf=0, saveT=0, T={}, SZ={small:Object.create(null),large:Object.create(null)}, curSz=Object.create(null);
 const K=(x,y,z)=>x+','+y+','+z, P3=k=>k.split(',').map(Number);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v|0));
 const dims=v=>[v.w||1,v.h||1,v.l||1]; // Breite(x), Höhe(y), Länge(z)
@@ -588,10 +624,16 @@ const LS='empyrion-werftplaner-v1';
 function store(){try{return JSON.parse(localStorage.getItem(LS))||{designs:{}}}catch(e){return {designs:{}}}}
 function storeSet(o){try{localStorage.setItem(LS,JSON.stringify(o));return true}catch(e){return false}}
 function autosave(){clearTimeout(saveT);saveT=setTimeout(()=>{const o=store();o.last=serialize();o.layer=layer;storeSet(o)},400)}
-function saveSizes(){const o=store();o.sizes=SZ;storeSet(o)}
+function saveSizes(){const o=store();o.sizes2=SZ;storeSet(o)}
 if(IS_APP&&navigator.storage&&navigator.storage.persist){navigator.storage.persist().catch(()=>{})}
 const grpOf=()=>CLASSES[S.cls].grp;
-function sizeOf(t){const s=SZ[grpOf()][t];return Array.isArray(s)?s:[1,1,1]} // [B,L,H]
+function sizeList(t,g){g=g||grpOf();const o=SZ[g]&&SZ[g][t];return o&&o.length?o:(DEF_SZ[g][t]||[[1,1,1]])} // je [B,H,L] wie im Spiel
+function sizeGame(t){const l=sizeList(t);return l[Math.min(curSz[t]||0,l.length-1)]}
+function sizeOf(t){const [x,y,z]=sizeGame(t);return [x,z,y]} // [B,L,H] fürs Raster
+/* tatsächliche Maße beim Setzen: Düsen liegen längs ihrer Schubrichtung, andere Geräte lassen sich um 90° drehen */
+function placedDims(t){if(TM[t].hull)return [1,1,1];let [w,l,h]=sizeOf(t);
+  if(TM[t].dir){if(curDir==='l'||curDir==='r')[w,l]=[l,w];else if(curDir==='u'||curDir==='d')[l,h]=[h,l];return [w,l,h]}
+  if(curRy)[w,l]=[l,w];return [w,l,h]}
 
 /* ---------- Beispiel ---------- */
 function sample(){
@@ -671,9 +713,9 @@ function renderDrawer(){
   const L=$('#dlist');L.innerHTML='';const groups={};TYPES.forEach(t=>(groups[t.g]=groups[t.g]||[]).push(t));
   for(const g in groups){const d=document.createElement('div');d.className='grp';d.innerHTML=`<div class="lbl">${g}</div>`;
     groups[g].forEach(t=>{const b=document.createElement('button');b.className='blk';b.dataset.id=t.id;
-      b.innerHTML=`<span class="sw" style="background:${t.c};color:${ink(t.c)}">${t.dir?'↑':t.k}</span><span class="nm">${t.n}</span>${t.hull?'<span class="more">Formen ›</span>':t.dir?'<span class="more">Richtung ›</span>':`<span class="tagsz" data-sz="${t.id}"></span>`}`;
+      b.innerHTML=`<span class="sw" style="background:${t.c};color:${ink(t.c)}">${t.dir?'↑':t.k}</span><span class="nm">${t.n}</span><span class="tagsz"></span>`;
       b.onclick=()=>{cur=t.id;if(t.hull)lastHull=t.id;if(tool!=='paint'&&tool!=='pan')setTool('paint');syncUI();
-        if(t.hull)openModal('shapeModal');else if(t.dir)openModal('dirModal');else{closeDrawer();toast(t.n+' gewählt')}};
+        if(t.hull)openModal('shapeModal');else if(t.dir)openModal('dirModal');else if(sizeList(t.id).length>1)openModal('sizeModal');else{closeDrawer();toast(t.n+' gewählt')}};
       d.appendChild(b)});
     L.appendChild(d)}
 }
@@ -694,7 +736,8 @@ let iconMat='';
 function syncUI(){
   const t=TM[cur];
   document.querySelectorAll('#dlist .blk').forEach(b=>b.setAttribute('aria-pressed',b.dataset.id===cur));
-  document.querySelectorAll('[data-sz]').forEach(e=>e.textContent=sizeOf(e.dataset.sz).join('×'));
+  document.querySelectorAll('#dlist .blk').forEach(b=>{const id=b.dataset.id,ok=allowed(id,S.cls),tg=b.querySelector('.tagsz');b.disabled=!ok;b.classList.toggle('na',!ok);
+    if(tg)tg.textContent=ok?(TM[id].hull?'Formen ›':TM[id].dir?'Richtung ›':sizeList(id).length>1?sizeList(id).length+' Größen ›':fmtSz(sizeList(id)[0])):'nur '+ALLOW[id].join('/')});
   // Formen-Pop-up
   const mat=TM[t.hull?cur:lastHull];
   const key=mat.id+'|'+(window.devicePixelRatio||1)+'|'+T.edge;
@@ -709,15 +752,25 @@ function syncUI(){
   // Werkzeugleiste
   $('#chipSw').style.background=t.c;$('#chipSw').style.color=ink(t.c);$('#chipSw').textContent=t.dir?DIRS[curDir].a:t.k;
   $('#chipName').textContent=t.n;
-  let [w,l,h]=t.hull?[1,1,1]:sizeOf(cur);if(curRy)[w,l]=[l,w];
-  $('#chipSub').textContent=t.hull?SM[curShape].n+(curRot?' · '+SD[faceOf(curRot)].n:''):t.dir?`Schub ${DIRS[curDir].n} · ${w}×${l}×${h}`:`${w} × ${l} × ${h} Blöcke`;
+  const gs=t.hull?null:fmtSz(sizeGame(cur));
+  $('#chipSub').textContent=t.hull?SM[curShape].n+(curRot?' · '+SD[faceOf(curRot)].n:''):t.dir?`Schub ${DIRS[curDir].n} · ${gs}`:`${gs} Blöcke`+(curRy?' · gedreht':'');
   const c=$('#ctxBtn');
   if(t.hull){c.innerHTML='<canvas></canvas><span>Form</span>';c.setAttribute('aria-label','Form und Drehung wählen');drawIcon(c.querySelector('canvas'),curShape,curRot,t.rgb,28);c.disabled=false}
   else if(t.dir){c.innerHTML=`<span class="big">${DIRS[curDir].a}</span><span>Richtung</span>`;c.setAttribute('aria-label','Schubrichtung wählen');c.disabled=false}
-  else{const s=sizeOf(cur);c.innerHTML='<span class="big">↻</span><span>Drehen</span>';c.setAttribute('aria-label','Gerät drehen');c.disabled=s[0]===s[1]}
+  else{c.innerHTML=`<span class="big" style="font-size:.8rem;font-family:var(--f-mono)">${gs}</span><span>Größe</span>`;c.setAttribute('aria-label','Größe wählen und drehen');c.disabled=false}
+  renderSizeBtns();
 }
+function renderSizeBtns(){const t=TM[cur];if(t.hull)return;const list=sizeList(cur),i=Math.min(curSz[cur]||0,list.length-1);
+  const html=list.map((a,k)=>`<button class="btn" data-szi="${k}" aria-pressed="${k===i}"><b>${fmtSz(a)}</b>${k===0&&list.length>1?'klein':k===list.length-1&&list.length>1?'groß':''}</button>`).join('');
+  $('#sizeGrid').innerHTML=html;$('#dirSizes').innerHTML=html;$('#dirSizeRow').hidden=list.length<2;
+  document.querySelectorAll('[data-szi]').forEach(b=>b.onclick=()=>{curSz[cur]=+b.dataset.szi;syncUI()});
+  $('#sizeTitle').textContent=t.n+' · Größe';$('#sizeSw').style.background=t.c;$('#sizeSw').style.color=ink(t.c);$('#sizeSw').textContent=t.k;
+  const [w,l]=sizeOf(cur);$('#szRot').disabled=w===l;$('#szRot').textContent=curRy?'↻ Gedreht (90°) – zurückdrehen':'↻ Um 90° drehen';
+  const pd=placedDims(cur);$('#sizeInfo').textContent=`Belegt im Raster: ${pd[0]} breit × ${pd[1]} lang × ${pd[2]} hoch`}
 const syncPalette=syncUI;
-$('#ctxBtn').onclick=()=>{const t=TM[cur];if(t.hull)openModal('shapeModal');else if(t.dir)openModal('dirModal');else{curRy^=1;syncUI();toast('Gerät gedreht')}};
+$('#ctxBtn').onclick=()=>{const t=TM[cur];if(t.hull)openModal('shapeModal');else if(t.dir)openModal('dirModal');else openModal('sizeModal')};
+$('#szRot').onclick=()=>{curRy^=1;syncUI()};
+$('#szEdit').onclick=()=>{closeModal('sizeModal');renderSizes();$('#szMsg').textContent='';openModal('szModal')};
 function setTool(t){tool=t;document.querySelectorAll('[data-tool]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===t));grid.classList.toggle('pan',t==='pan');if(typeof syncViewHint==='function')syncViewHint()}
 function setMirror(v){mirror=v;$('#mirrorBtn').classList.toggle('on',v);$('#mirrorBtn').setAttribute('aria-pressed',v);drawGrid()}
 $('#mirrorBtn').onclick=()=>{setMirror(!mirror);toast(mirror?'Spiegeln an':'Spiegeln aus')};
@@ -757,7 +810,7 @@ function drawGrid(){
   if(mirror){ctx.strokeStyle=T.accent;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(w/2,0);ctx.lineTo(w/2,h);ctx.stroke();ctx.setLineDash([])}
   {const cx=w/2,cz=h/2,r=Math.max(4,cs*.28);ctx.strokeStyle=T.accent;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(cx,cz,r,0,Math.PI*2);
    ctx.moveTo(cx-r*1.7,cz);ctx.lineTo(cx+r*1.7,cz);ctx.moveTo(cx,cz-r*1.7);ctx.lineTo(cx,cz+r*1.7);ctx.stroke();ctx.lineWidth=1}
-  if(hover){let fw=1,fl=1;if(tool==='paint'&&!TM[cur].hull){[fw,fl]=sizeOf(cur);if(curRy)[fw,fl]=[fl,fw]}
+  if(hover){let fw=1,fl=1;if(tool==='paint'&&!TM[cur].hull){[fw,fl]=placedDims(cur)}
     const hx=Math.max(0,Math.min(hover.x,S.W-fw)),hz=Math.max(0,Math.min(hover.z,S.L-fl));
     ctx.strokeStyle=T.accent;ctx.lineWidth=2;ctx.strokeRect(hx*cs+1.5,hz*cs+1.5,fw*cs-3,fl*cs-3);
     const mx=S.W-hx-fw;if(mirror&&mx!==hx){ctx.setLineDash([3,3]);ctx.strokeRect(mx*cs+1.5,hz*cs+1.5,fw*cs-3,fl*cs-3);ctx.setLineDash([])}}
@@ -766,7 +819,7 @@ function cellAt(e){const r=grid.getBoundingClientRect(),x=Math.floor((e.clientX-
   return x>=0&&z>=0&&x<S.W&&z<S.L?{x,z}:null}
 function makeVal(){const t=TM[cur],v={t:cur};
   if(t.hull){if(curShape!=='cube')v.s=curShape;if(curRot)v.r=curRot}
-  else{let [w,l,h]=sizeOf(cur);if(curRy)[w,l]=[l,w];if(w>1)v.w=w;if(l>1)v.l=l;if(h>1)v.h=h;if(t.dir)v.d=curDir}
+  else{const [w,l,h]=placedDims(cur);if(w>1)v.w=w;if(l>1)v.l=l;if(h>1)v.h=h;if(t.dir)v.d=curDir}
   return v}
 function mirrorVal(v){const m={...v};if(m.d)m.d=m.d==='l'?'r':m.d==='r'?'l':m.d;
   if(TM[m.t].hull){const r2=mirrorRot(m.s||'cube',m.r||0);if(r2)m.r=r2;else delete m.r}return m}
@@ -780,9 +833,10 @@ function applyAt3(x,y,z,mode){
 }
 function applyAt(x,z,mode){applyAt3(x,layer,z,mode)}
 function pickAt(x,y,z){const o=at(x,y,z);if(!o)return;const v=o.v,t=TM[v.t];cur=v.t;
-  if(t.hull){lastHull=v.t;curShape=v.s||'cube';curRot=v.r||0}else{if(v.d)curDir=v.d;curRy=(v.w||1)!==sizeOf(v.t)[0]&&(v.w||1)===sizeOf(v.t)[1]?1:0}
+  if(t.hull){lastHull=v.t;curShape=v.s||'cube';curRot=v.r||0}else{if(v.d)curDir=v.d;const key=dims(v).slice().sort().join(),li=sizeList(v.t).findIndex(a=>a.slice().sort().join()===key);if(li>=0)curSz[v.t]=li;
+    curRy=!t.dir&&(v.w||1)!==sizeOf(v.t)[0]&&(v.w||1)===sizeOf(v.t)[1]?1:0}
   syncUI();setTool('paint');toast(t.n+(t.hull?' · '+SM[v.s||'cube'].n:'')+' gewählt')}
-const isBig=()=>{if(TM[cur].hull)return false;const s=sizeOf(cur);return s[0]*s[1]*s[2]>1};
+const isBig=()=>{if(TM[cur].hull)return false;const s=placedDims(cur);return s[0]*s[1]*s[2]>1};
 grid.addEventListener('contextmenu',e=>e.preventDefault());
 grid.addEventListener('pointerdown',e=>{
   if(tool==='pan'&&e.pointerType!=='mouse')return;
@@ -864,7 +918,7 @@ function target3D(hit,mode){if(!hit)return null;
     if(c[0]<0||c[1]<0||c[2]<0||c[0]>=S.W||c[1]>=S.H||c[2]>=S.L)return 'out';return c}
   return hit.ground?null:hit.cell}
 function hover3D(px,py){const mode=tool==='pan'||!V.edit?null:tool,hit=mode?pick3D(px,py):null,c=hit&&target3D(hit,mode);let h=null;
-  if(Array.isArray(c)){if(mode==='paint'){let [w,l,hh]=TM[cur].hull?[1,1,1]:sizeOf(cur);if(!TM[cur].hull&&curRy)[w,l]=[l,w];
+  if(Array.isArray(c)){if(mode==='paint'){let [w,l,hh]=placedDims(cur);
       const x=Math.max(0,Math.min(c[0],S.W-w)),y=Math.max(0,Math.min(c[1],S.H-hh)),z=Math.max(0,Math.min(c[2],S.L-l));h={box:[x,y,z,x+w,y+hh,z+l]}}
     else{const o=at(c[0],c[1],c[2]);if(o){const [x,y,z]=P3(o.k),[w,hh,l]=dims(o.v);h={box:[x,y,z,x+w,y+hh,z+l],erase:mode==='erase'}}}}
   if(JSON.stringify(V.hover)!==JSON.stringify(h)){V.hover=h;render3D()}}
@@ -934,6 +988,9 @@ function updateInfo(){
     if(cls==='CV'&&!c('warp')) add('info','Kein Warpantrieb – Reisen in andere Systeme ist so nicht möglich.');
     if((cls==='CV'||cls==='BA')&&!c('o2')) add('info','Kein Sauerstofftank – drinnen gibt es keine Atemluft.');
     if(cls==='SV'&&!c('gear')) add('info','Keine Landebeine eingeplant.');
+    TYPES.forEach(t=>{const n=c(t.id);if(n&&!allowed(t.id,cls))add('err',`${t.n} ist bei ${cls} nicht erlaubt (${n}×) – nur ${ALLOW[t.id].join(', ')}.`)});
+    if(cls==='CV'&&c('weapon'))add('warn','Feste Waffen sind bei CV nur als Artillerie möglich.');
+    if(cls==='SV'&&c('turret'))add('warn','Geschütztürme sind bei SV stark eingeschränkt.');
     if(A.parts>1) add('warn',`${A.loose} Feld${A.loose===1?'':'er'} in ${A.parts-1} losen Teil${A.parts>2?'en':''} ohne Verbindung zum Hauptkörper.`);
   }
   $('#checks').innerHTML=L.map(([l,t])=>`<li><span class="dot ${l}"></span><span>${t}</span></li>`).join('');
@@ -950,13 +1007,16 @@ function updateInfo(){
 
 /* ---------- Gerätegrößen ---------- */
 function renderSizes(){
-  const tb=$('#szTable');const inp=(g,id,i)=>`<input type="number" inputmode="numeric" min="1" max="16" id="sz-${g}-${id}-${i}" data-g="${g}" data-t="${id}" data-i="${i}" value="${(SZ[g][id]||[1,1,1])[i]}" aria-label="${['Breite','Länge','Höhe'][i]}">`;
-  tb.innerHTML=`<tr><th>Gerät</th><th class="g" colspan="3">Klein · SV / HV (B × L × H)</th><th class="g" colspan="3">Groß · CV / BA (B × L × H)</th></tr>`+
-    DEVICES.map(t=>`<tr><td>${t.n}</td>${[0,1,2].map(i=>`<td${i===0?' class="g"':''}>${inp('small',t.id,i)}</td>`).join('')}${[0,1,2].map(i=>`<td${i===0?' class="g"':''}>${inp('large',t.id,i)}</td>`).join('')}</tr>`).join('');
-  tb.querySelectorAll('input').forEach(e=>e.onchange=()=>{const g=e.dataset.g,t=e.dataset.t,i=+e.dataset.i,v=clamp(e.value,1,16);e.value=v;
-    const a=(SZ[g][t]||[1,1,1]).slice();a[i]=v;if(a.every(n=>n===1))delete SZ[g][t];else SZ[g][t]=a;saveSizes();syncUI();$('#szMsg').textContent='Gespeichert.'});
+  const tb=$('#szTable'),cell=(g,t)=>{const ok=DEVICES.find(x=>x.id===t)&&(g==='small'?['SV','HV']:['CV','BA']).some(c=>allowed(t,c));
+    const own=SZ[g]&&SZ[g][t]&&SZ[g][t].length;return `<td class="g"><input type="text" id="sz-${g}-${t}" data-g="${g}" data-t="${t}" value="${sizeList(t,g).map(fmtSz).join(', ')}" ${ok?'':'disabled'} aria-label="${TM[t].n} ${g==='small'?'klein':'groß'}" spellcheck="false" style="width:9.5em${own?';border-color:var(--accent)':''}">${ok?'':'<div class="hint">nicht erlaubt</div>'}</td>`};
+  tb.innerHTML=`<tr><th>Gerät</th><th class="g">Klein · SV / HV</th><th class="g">Groß · CV / BA</th></tr>`+DEVICES.map(t=>`<tr><td>${t.n}</td>${cell('small',t.id)}${cell('large',t.id)}</tr>`).join('');
+  tb.querySelectorAll('input').forEach(e=>e.onchange=()=>{const g=e.dataset.g,t=e.dataset.t,list=parseSizes(e.value);
+    const def=(DEF_SZ[g][t]||[[1,1,1]]).map(fmtSz).join();
+    if(!list.length||list.map(fmtSz).join()===def){delete SZ[g][t];$('#szMsg').textContent='Wert aus der Blockliste übernommen.'}
+    else{SZ[g][t]=list;$('#szMsg').textContent='Gespeichert.'}
+    e.value=sizeList(t,g).map(fmtSz).join(', ');e.style.borderColor=SZ[g][t]?'var(--accent)':'';saveSizes();syncUI()});
 }
-$('#szReset').onclick=()=>{SZ={small:{},large:{}};saveSizes();renderSizes();syncUI();$('#szMsg').textContent='Alle Größen auf 1 × 1 × 1 gesetzt.'};
+$('#szReset').onclick=()=>{SZ={small:np(),large:np()};saveSizes();renderSizes();syncUI();$('#szMsg').textContent='Alle Größen wieder wie in der Blockliste.'};
 
 /* ---------- Ablauf ---------- */
 function dirty(){if(raf)return;raf=requestAnimationFrame(()=>{raf=0;drawGrid();render3D();updateInfo();autosave()})}
@@ -1019,14 +1079,14 @@ $('#xBtn').onclick=()=>{$('#xText').value=snap();$('#xMsg').textContent='';$('#f
 $('#fSave').onclick=()=>{download(fname(S.name)+'.werft.json',serialize());$('#fMsg').className='msg';$('#fMsg').textContent='Datei wird gespeichert (Ordner „Downloads“).'};
 $('#fBackup').onclick=()=>{const st=store(),d=st.designs||{},n=Object.keys(d).length;
   if(!n){$('#fMsg').className='msg err';$('#fMsg').textContent='Es gibt noch keine gespeicherten Designs zum Sichern.';return}
-  const dt=new Date().toISOString().slice(0,10);download(`werftplaner-sicherung-${dt}.json`,{werftplaner:'sicherung',v:2,designs:d,sizes:SZ});
+  const dt=new Date().toISOString().slice(0,10);download(`werftplaner-sicherung-${dt}.json`,{werftplaner:'sicherung',v:3,designs:d,sizes2:SZ});
   $('#fMsg').className='msg';$('#fMsg').textContent=`${n} Design${n===1?'':'s'} und die Gerätegrößen gesichert (Ordner „Downloads“).`};
 $('#fOpen').onclick=()=>$('#fInput').click();
 $('#fInput').onchange=async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;const m=$('#fMsg');
   try{const o=JSON.parse(await file.text());
     if(o&&o.designs&&typeof o.designs==='object'){const s=store();s.designs=s.designs||{};let n=0;
       for(const k in o.designs){try{deserialize(o.designs[k]);s.designs[k]=o.designs[k];n++}catch(_){}}
-      if(o.sizes&&o.sizes.small&&o.sizes.large){SZ=o.sizes;s.sizes=SZ;syncUI()}
+      if(o.sizes2&&o.sizes2.small&&o.sizes2.large){SZ={small:np(o.sizes2.small),large:np(o.sizes2.large)};s.sizes2=SZ;syncUI()}
       storeSet(s);m.className='msg';m.textContent=`${n} Design${n===1?'':'s'} aus der Sicherung übernommen. Du findest sie unter „Meine Designs“.`}
     else{const s=deserialize(o);load(s);m.className='msg';m.textContent=`„${s.name}“ geladen.`}}
   catch(err){m.className='msg err';m.textContent='Die Datei ließ sich nicht lesen. Wähle eine .json-Datei aus dem Werftplaner.'}};
@@ -1066,7 +1126,7 @@ addEventListener('pagehide',()=>{const o=store();o.last=serialize();o.layer=laye
 /* ---------- Start ---------- */
 readTheme();
 const st=store();
-if(st.sizes&&st.sizes.small&&st.sizes.large)SZ=st.sizes;
+if(st.sizes2&&st.sizes2.small&&st.sizes2.large)SZ={small:np(st.sizes2.small),large:np(st.sizes2.large)};
 try{S=st.last?deserialize(st.last):null}catch(e){S=null}
 if(!S){S=sample();layer=2}else layer=clamp(st.layer||0,0,S.H-1);
 renderDrawer();renderShapeGrid();syncViewHint();

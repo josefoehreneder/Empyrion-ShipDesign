@@ -1,6 +1,6 @@
 // Werftplaner – Offline-Speicher
 // Bei einer neuen Version die Nummer erhöhen, damit Handys die neuen Dateien laden.
-const CACHE = 'werftplaner-v6';
+const CACHE = 'werftplaner-v7';
 const ASSETS = [
   './',
   './index.html',
