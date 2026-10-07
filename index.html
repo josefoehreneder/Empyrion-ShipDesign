@@ -188,6 +188,8 @@ h2{font-family:var(--f-display);font-weight:700;font-size:.9rem;letter-spacing:.
 .dirs .btn b{font-size:1.3rem;line-height:1}
 .dirs .btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .msg{margin:0;font-size:.85rem}
+.disc{display:flex;flex-direction:column;gap:10px;font-size:.9rem;line-height:1.5;max-width:60ch}
+.disc p{margin:0}
 .msg.err{color:var(--err)}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .lib{list-style:none;margin:0;padding:0;display:grid;gap:6px}
@@ -276,6 +278,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
         <button class="btn" id="szBtn">Gerätegrößen</button>
         <button class="btn" id="xBtn">Dateien &amp; Teilen</button>
         <button class="btn" id="installBtn" hidden>App installieren</button>
+        <button class="btn" id="discBtn">Haftung &amp; Info</button>
       </div>
     </div>
   </header>
@@ -406,6 +409,20 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
     <label class="fld"><span>Design-Code zum Kopieren oder Einfügen</span><textarea id="xText" spellcheck="false"></textarea></label>
     <div class="row"><button class="btn" id="xCopy">Code kopieren</button><button class="btn" id="xLoad">Eingefügten Code laden</button></div>
     <p class="msg" id="xMsg" aria-live="polite"></p>
+  </div>
+</div>
+
+<div class="modal" id="discModal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="discTitle">
+    <div class="shead"><h3 id="discTitle">Haftungsausschluss</h3><button class="ib" data-close="discModal" aria-label="Schließen" id="discX">✕</button></div>
+    <div class="disc">
+      <p><b>Die Nutzung des Werftplaners erfolgt auf eigene Gefahr.</b></p>
+      <p>Der Werftplaner ist ein privates, nicht kommerzielles Hilfsprogramm. Für die Richtigkeit, Vollständigkeit und Aktualität der Angaben (z. B. Blockformen, Gerätegrößen, Prüfliste, Maße) wird keine Gewähr übernommen. Ob ein Design im Spiel so funktioniert, ist selbst zu prüfen.</p>
+      <p>Es wird keine Haftung für Schäden oder Verluste übernommen, die aus der Nutzung entstehen, insbesondere nicht für verlorene Designs oder Daten. Designs werden nur auf dem jeweiligen Gerät gespeichert. Sichere sie regelmäßig unter „Dateien &amp; Teilen“.</p>
+      <p>Es besteht kein Anspruch auf Verfügbarkeit, Fehlerfreiheit, Weiterentwicklung oder Support.</p>
+      <p class="hint">Inoffizielles Fanprojekt. Kein Zusammenhang mit Eleon Game Studios. „Empyrion – Galactic Survival“ ist eine Marke des jeweiligen Rechteinhabers.</p>
+    </div>
+    <button class="btn primary" id="discOk">Verstanden</button>
   </div>
 </div>
 
@@ -645,7 +662,7 @@ $('#chip').onclick=openDrawer;
 $('#propsBtn').onclick=()=>$('#propsMenu').hidden?openProps():closeProps();
 $('#scrim').onclick=()=>{closeDrawer();closeProps()};
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.close;id==='drawer'?closeDrawer():closeModal(id)}));
-document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeModal(m.id)}));
+document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m&&!(m.id==='discModal'&&$('#discX').hidden))closeModal(m.id)}));
 document.querySelectorAll('.tabs [data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
 function setView(v){shell.dataset.view=v;document.querySelectorAll('.tabs [data-view]').forEach(b=>b.setAttribute('aria-selected',b.dataset.view===v));
   requestAnimationFrame(()=>{fitGrid();drawGrid();render3D()})}
@@ -1026,7 +1043,7 @@ $('#installBtn').onclick=async()=>{if(!deferredInstall)return;closeProps();defer
 addEventListener('appinstalled',()=>{$('#installBtn').hidden=true;toast('Werftplaner installiert')});
 
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){const m=[...document.querySelectorAll('.modal')].find(x=>!x.hidden);if(m){closeModal(m.id);return}closeDrawer();closeProps();return}
+  if(e.key==='Escape'){const m=[...document.querySelectorAll('.modal')].find(x=>!x.hidden);if(m){if(!(m.id==='discModal'&&$('#discX').hidden))closeModal(m.id);return}closeDrawer();closeProps();return}
   if(e.target.matches('input,textarea,select'))return;
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo();return}
   if(e.ctrlKey||e.metaKey||e.altKey)return;
@@ -1053,6 +1070,10 @@ if(st.sizes&&st.sizes.small&&st.sizes.large)SZ=st.sizes;
 try{S=st.last?deserialize(st.last):null}catch(e){S=null}
 if(!S){S=sample();layer=2}else layer=clamp(st.layer||0,0,S.H-1);
 renderDrawer();renderShapeGrid();syncViewHint();
+/* Haftungsausschluss: beim ersten Start bestätigen, danach im Menü */
+$('#discBtn').onclick=()=>{$('#discX').hidden=false;openModal('discModal')};
+$('#discOk').onclick=()=>{const o=store();o.disclaimer=1;storeSet(o);closeModal('discModal')};
+if(!store().disclaimer){$('#discX').hidden=true;$('#discModal').hidden=false;$('#discOk').focus()}
 syncFields();full();resetView();syncUndo();syncUI();
 
 if(IS_APP&&'serviceWorker' in navigator&&location.protocol.startsWith('http')){
