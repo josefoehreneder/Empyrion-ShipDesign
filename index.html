@@ -16,7 +16,7 @@
   --bg:#e9edf1; --panel:#ffffff; --panel-2:#eef2f6; --line:#c9d2dc; --fg:#17212c; --muted:#596777;
   --accent:#d26b16; --accent-soft:#f6e3d2; --accent-ink:#ffffff;
   --ok:#2c8049; --warn:#a86b10; --err:#bf3a33; --info:#3c6f9e;
-  --grid-bg:#f6f8fa; --grid-line:#dbe1e8; --grid-strong:#b8c3cf; --view-bg:#dfe5eb; --edge:rgba(10,16,24,.28);
+  --grid-bg:#f6f8fa; --grid-line:#dbe1e8; --grid-strong:#b8c3cf; --view-bg:#dfe5eb; --edge:rgba(10,16,24,.28); --cell-edge:rgba(10,16,24,.22);
   --scrim:rgba(10,16,24,.42); --shadow:0 10px 30px -8px rgba(10,16,24,.35);
   --f-display:"Bahnschrift","DIN Alternate","Roboto Condensed","Arial Narrow",system-ui,sans-serif;
   --f-body:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif;
@@ -28,7 +28,7 @@
   --bg:#0e1319; --panel:#151c24; --panel-2:#1d2630; --line:#2a3542; --fg:#e3e9ef; --muted:#8e9bab;
   --accent:#f08a2e; --accent-soft:#3a2614; --accent-ink:#1a0f05;
   --ok:#55c07b; --warn:#e2a742; --err:#ee6b62; --info:#72a8db;
-  --grid-bg:#10161d; --grid-line:#1f2934; --grid-strong:#334152; --view-bg:#0b1015; --edge:rgba(0,0,0,.45);
+  --grid-bg:#0f151c; --grid-line:#1f2934; --grid-strong:#36475a; --view-bg:#18212b; --edge:rgba(190,210,230,.20); --cell-edge:rgba(200,220,240,.34);
   --scrim:rgba(0,0,0,.55); --shadow:0 10px 30px -8px rgba(0,0,0,.7);
   color-scheme:dark;
 }}
@@ -36,7 +36,7 @@
   --bg:#0e1319; --panel:#151c24; --panel-2:#1d2630; --line:#2a3542; --fg:#e3e9ef; --muted:#8e9bab;
   --accent:#f08a2e; --accent-soft:#3a2614; --accent-ink:#1a0f05;
   --ok:#55c07b; --warn:#e2a742; --err:#ee6b62; --info:#72a8db;
-  --grid-bg:#10161d; --grid-line:#1f2934; --grid-strong:#334152; --view-bg:#0b1015; --edge:rgba(0,0,0,.45);
+  --grid-bg:#0f151c; --grid-line:#1f2934; --grid-strong:#36475a; --view-bg:#18212b; --edge:rgba(190,210,230,.20); --cell-edge:rgba(200,220,240,.34);
   --scrim:rgba(0,0,0,.55); --shadow:0 10px 30px -8px rgba(0,0,0,.7);
   color-scheme:dark;
 }
@@ -73,6 +73,10 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 input[type=text],input[type=number],select,textarea{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:9px 10px;min-width:0;font-size:16px}
 input[type=number]{width:4.2em;font-family:var(--f-mono);font-variant-numeric:tabular-nums;padding:9px 6px}
 .dims{display:flex;align-items:center;gap:6px;color:var(--muted);flex-wrap:wrap}
+.seg3{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg3 button{border:0;border-right:1px solid var(--line);background:var(--panel-2);min-height:42px;font-weight:600;font-size:.82rem;padding:0 4px}
+.seg3 button:last-child{border-right:0}
+.seg3 button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 .dimgrid{display:grid;grid-template-columns:auto 44px minmax(0,5em) 44px;gap:6px;align-items:center;justify-content:start}
 .dimgrid>span{font-size:.85rem;color:var(--muted);min-width:4.5em}
 .dimgrid input{width:100%;text-align:center}
@@ -283,6 +287,13 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
         </div>
         <p class="hint">Das Raster wächst und schrumpft gleichmäßig nach allen Seiten, die Mitte bleibt die Mitte. +/− ändert um einen Block je Seite.</p>
         <button class="btn" id="resize">Größe übernehmen</button>
+      </div>
+      <div class="fld"><span>Darstellung</span>
+        <div class="seg3" role="group" aria-label="Darstellung">
+          <button data-theme-set="auto" aria-pressed="true">Automatisch</button>
+          <button data-theme-set="light" aria-pressed="false">☀ Hell</button>
+          <button data-theme-set="dark" aria-pressed="false">☾ Dunkel</button>
+        </div>
       </div>
       <div class="menu">
         <button class="btn primary" id="saveBtn">Speichern</button>
@@ -689,7 +700,7 @@ function sample(){
 
 /* ---------- Theme ---------- */
 function readTheme(){const cs=getComputedStyle(document.documentElement),g=n=>cs.getPropertyValue(n).trim();
-  T={gridBg:g('--grid-bg'),gridLine:g('--grid-line'),gridStrong:g('--grid-strong'),accent:g('--accent'),viewBg:g('--view-bg'),edge:g('--edge'),fg:g('--fg')};}
+  T={gridBg:g('--grid-bg'),gridLine:g('--grid-line'),gridStrong:g('--grid-strong'),accent:g('--accent'),viewBg:g('--view-bg'),edge:g('--edge'),cellEdge:g('--cell-edge'),fg:g('--fg')};}
 function ink(hex){const n=parseInt(hex.slice(1),16),r=n>>16,g=n>>8&255,b=n&255;return (0.299*r+0.587*g+0.114*b)/255>.6?'#11171e':'#ffffff'}
 const shade=(rgb,s)=>`rgb(${Math.min(255,rgb[0]*s)|0},${Math.min(255,rgb[1]*s)|0},${Math.min(255,rgb[2]*s)|0})`;
 
@@ -813,7 +824,7 @@ function fitGrid(){const wr=$('#cwrap'),w=wr.clientWidth-4,h=wr.clientHeight-4;i
   CELL=Math.max(6,Math.min(110,Math.round(base*zoomF)));}
 function drawHull2D(ctx,v,x,z,cs,alpha){const t=TM[v.t],g=geo(v.s||'cube',v.r||0),ox=x*cs+1,oz=z*cs+1,sz=cs-2,M=p=>[ox+p[0]*sz,oz+p[1]*sz];
   ctx.globalAlpha=alpha*(t.a?.85:1);
-  ctx.fillStyle=shade(t.rgb,.45);poly(ctx,g.sil.map(M));ctx.fill();
+  ctx.fillStyle=shade(t.rgb,.45);poly(ctx,g.sil.map(M));ctx.fill();ctx.lineWidth=1;ctx.strokeStyle=T.cellEdge;ctx.stroke();
   ctx.lineWidth=.8;ctx.strokeStyle=T.edge;
   for(const f of g.up){const pts=f.pts.map(p=>M([p[0],p[2]]));
     if(f.n[1]<.99){const hl=Math.hypot(f.n[0],f.n[2])||1,ux=-f.n[0]/hl,uz=-f.n[2]/hl,pr=f.pts.map(p=>p[0]*ux+p[2]*uz),mn=Math.min(...pr),mx=Math.max(...pr),cx=f.c[0],cz=f.c[2],cp=cx*ux+cz*uz;
@@ -830,7 +841,7 @@ function drawGrid(){
   const pass=(ly,ghost)=>{S.blocks.forEach((v,k)=>{const [x,y,z]=P3(k),[bw,bh,bl]=dims(v);if(ly<y||ly>=y+bh)return;const t=TM[v.t];
     if(t.hull){if(ghost){ctx.globalAlpha=.3;ctx.fillStyle=t.c;ctx.fillRect(x*cs+cs*.22,z*cs+cs*.22,cs*.56,cs*.56);ctx.globalAlpha=1}else drawHull2D(ctx,v,x,z,cs,1);return}
     if(ghost){ctx.globalAlpha=.3;ctx.fillStyle=t.c;ctx.fillRect(x*cs+cs*.22,z*cs+cs*.22,bw*cs-cs*.44,bl*cs-cs*.44);ctx.globalAlpha=1;return}
-    ctx.fillStyle=t.c;ctx.fillRect(x*cs+1,z*cs+1,bw*cs-2,bl*cs-2);
+    ctx.fillStyle=t.c;ctx.fillRect(x*cs+1,z*cs+1,bw*cs-2,bl*cs-2);ctx.lineWidth=1;ctx.strokeStyle=T.cellEdge;ctx.strokeRect(x*cs+1.5,z*cs+1.5,bw*cs-3,bl*cs-3);
     if(bw>1||bl>1||bh>1){ctx.strokeStyle=T.edge;ctx.lineWidth=2;ctx.strokeRect(x*cs+2,z*cs+2,bw*cs-4,bl*cs-4)}
     if(cs>=14){ctx.fillStyle=ink(t.c);const lab=t.dir?DIRS[v.d].a:t.k;ctx.fillText(lab,x*cs+bw*cs/2,z*cs+bl*cs/2+1);
       if(bh>1&&cs>=20){ctx.font=`600 ${Math.round(cs*.28)}px ui-monospace, Menlo, monospace`;ctx.fillText(`${ly-y+1}/${bh}`,x*cs+bw*cs/2,z*cs+bl*cs/2+cs*.36);ctx.font=`700 ${Math.max(9,Math.round(cs*.42))}px ui-monospace, "Roboto Mono", Menlo, monospace`}}})};
@@ -1233,6 +1244,15 @@ if(st.sizes2&&st.sizes2.small&&st.sizes2.large)SZ={small:np(st.sizes2.small),lar
 try{S=st.last?deserialize(st.last):null}catch(e){S=null}
 if(!S){S=sample();layer=2}else layer=clamp(st.layer||0,0,S.H-1);
 renderDrawer();renderShapeGrid();syncViewHint();
+/* Darstellung: automatisch (wie das Gerät), hell oder dunkel */
+let themeMode='auto';
+function applyTheme(m){themeMode=m;const r=document.documentElement;if(m==='auto')r.removeAttribute('data-theme');else r.setAttribute('data-theme',m);
+  document.querySelectorAll('[data-theme-set]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.themeSet===m));
+  const metas=document.querySelectorAll('meta[name="theme-color"]');
+  metas.forEach((mt,i)=>mt.setAttribute('content',m==='auto'?(i===0?'#e9edf1':'#0e1319'):m==='dark'?'#0e1319':'#e9edf1'));
+  readTheme();iconMat='';eIconMat='';syncUI();drawGrid();render3D()}
+document.querySelectorAll('[data-theme-set]').forEach(b=>b.onclick=()=>{applyTheme(b.dataset.themeSet);try{const o=store();o.theme=themeMode;storeSet(o)}catch(e){}});
+if(st.theme==='light'||st.theme==='dark')applyTheme(st.theme);
 const GH={below:['↓','darunter'],above:['↑','darüber'],off:['○','keine']};
 function syncGhost(){const [i,txt]=GH[ghost];$('#ghostBtn').innerHTML=`<i>${i}</i>Ebene ${txt}`;$('#ghostBtn').classList.toggle('off',ghost==='off');
   $('#ghostBtn').title='Blass angezeigt: Ebene '+txt+' – tippen zum Umschalten'}
