@@ -803,7 +803,7 @@ const syncPalette=syncUI;
 $('#ctxBtn').onclick=()=>{const t=TM[cur];if(t.hull)openModal('shapeModal');else if(t.dir)openModal('dirModal');else openModal('sizeModal')};
 $('#szRot').onclick=()=>{curRy^=1;syncUI()};
 $('#szEdit').onclick=()=>{closeModal('sizeModal');renderSizes();$('#szMsg').textContent='';openModal('szModal')};
-function setTool(t){tool=t;document.querySelectorAll('[data-tool]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===t));grid.classList.toggle('pan',t==='pan');if(typeof syncViewHint==='function')syncViewHint()}
+function setTool(t){tool=t;document.querySelectorAll('[data-tool]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===t));grid.classList.toggle('pan',t==='pan');const pl=document.querySelector('[data-tool=pick] span');if(pl)pl.textContent=t==='pick'&&typeof pipSrc!=='undefined'&&pipSrc?'Übertragen':'Pipette';if(typeof syncViewHint==='function')syncViewHint()}
 function setMirror(v){mirror=v;$('#mirrorBtn').classList.toggle('on',v);$('#mirrorBtn').setAttribute('aria-pressed',v);drawGrid()}
 $('#mirrorBtn').onclick=()=>{setMirror(!mirror);toast(mirror?'Spiegeln an':'Spiegeln aus')};
 /* ---------- 2D-Raster ---------- */
@@ -867,10 +867,25 @@ function applyAt3(x,y,z,mode){
   return true
 }
 function applyAt(x,z,mode){applyAt3(x,layer,z,mode)}
-function pickAt(x,y,z){const o=at(x,y,z);if(!o)return;const v=o.v,t=TM[v.t];cur=v.t;
+function pickAt(x,y,z,keep){const o=at(x,y,z);if(!o)return;const v=o.v,t=TM[v.t];cur=v.t;
   if(t.hull){lastHull=v.t;curShape=v.s||'cube';curRot=v.r||0}else{if(v.d)curDir=v.d;const key=dims(v).slice().sort().join(),li=sizeList(v.t).findIndex(a=>a.slice().sort().join()===key);if(li>=0)curSz[v.t]=li;
     curRy=!t.dir&&(v.w||1)!==sizeOf(v.t)[0]&&(v.w||1)===sizeOf(v.t)[1]?1:0}
-  syncUI();setTool('paint');toast(t.n+(t.hull?' · '+SM[v.s||'cube'].n:'')+' gewählt')}
+  syncUI();if(keep)return;setTool('paint');toast(t.n+(t.hull?' · '+SM[v.s||'cube'].n:'')+' gewählt')}
+/* Pipette: erster Tipp nimmt auf, weitere Tipps übertragen die Eigenschaften */
+let pipSrc=null,pipSkip=0;
+const pipName=v=>{const t=TM[v.t];return t.hull?`${t.n.replace(/ \(.*\)/,'')} · ${SM[v.s||'cube'].n}`+(v.r?` · ${SD[faceOf(v.r)].n}`:''):t.n+(v.d?` · ${DIRS[v.d].n}`:'')};
+function pipTake(x,y,z){const o=at(x,y,z);if(!o){toast('Tippe auf einen Block, um ihn aufzunehmen.');return}
+  pipSrc={...o.v};pickAt(x,y,z,true);syncPip();toast(`Aufgenommen: ${pipName(pipSrc)} – jetzt auf andere Blöcke tippen oder darüber wischen`)}
+function transferOne(k,mir){const old=S.blocks.get(k),src=pipSrc,ts=TM[src.t],to=TM[old.t];
+  if(ts.hull&&to.hull){const nv={t:src.t};if(src.s)nv.s=src.s;if(src.r)nv.r=src.r;const fin=mir?mirrorVal(nv):nv;
+    if(JSON.stringify(fin)===JSON.stringify(old))return k;S.blocks.set(k,fin);return k}
+  if(!ts.hull&&src.t===old.t){if(!ts.dir)return k;let d=src.d;if(mir)d=d==='l'?'r':d==='r'?'l':d;if(old.d===d)return k;
+    const [w,l,h]=thrDims(old,d),nv={t:old.t,d};if(w>1)nv.w=w;if(l>1)nv.l=l;if(h>1)nv.h=h;const [x,y,z]=P3(k);delAnchor(k);const p=placeAt(x,y,z,nv);return p?K(...p):null}
+  pipSkip++;return k}
+function transferAt(x,y,z){if(!pipSrc)return;const o=at(x,y,z);if(!o)return;
+  let mk=null;if(mirror){const [ax]=P3(o.k),w=dims(o.v)[0],mx=S.W-ax-w;if(mx!==ax){const m=at(mx,y,z);if(m&&m.k!==o.k&&m.v.t===o.v.t)mk=m.k}}
+  transferOne(o.k,false);if(mk)transferOne(mk,true)}
+function syncPip(){const b=document.querySelector('[data-tool=pick] span');if(b)b.textContent=pipSrc&&tool==='pick'?'Übertragen':'Pipette';if(typeof syncViewHint==='function')syncViewHint()}
 const isBig=()=>{if(TM[cur].hull)return false;const s=placedDims(cur);return s[0]*s[1]*s[2]>1};
 grid.addEventListener('contextmenu',e=>e.preventDefault());
 grid.addEventListener('pointerdown',e=>{
@@ -882,14 +897,15 @@ grid.addEventListener('pointerdown',e=>{
     grid.addEventListener('pointermove',mv);grid.addEventListener('pointerup',upf);return}
   e.preventDefault();
   const mode=e.button===2?'erase':tool;
-  if(mode==='pick'){pickAt(p.x,layer,p.z);return}
+  if(mode==='pick'&&!pipSrc){pipTake(p.x,layer,p.z);return}
+  if(mode==='pick'){grid.setPointerCapture(e.pointerId);pushUndo();pipSkip=0;painting={mode:'transfer',last:p.x+','+p.z};transferAt(p.x,layer,p.z);dirty();return}
   if(mode==='edit'){const o=at(p.x,layer,p.z);if(o)openEdit(o.k);else toast('Tippe auf einen bestehenden Block, um ihn zu ändern.');return}
   grid.setPointerCapture(e.pointerId);pushUndo();painting={mode,last:p.x+','+p.z,single:mode==='paint'&&isBig()};applyAt(p.x,p.z,mode);dirty();
 });
 grid.addEventListener('pointermove',e=>{const p=cellAt(e);
-  if(painting&&p&&!painting.single){const k=p.x+','+p.z;if(k!==painting.last){painting.last=k;applyAt(p.x,p.z,painting.mode);dirty()}}
+  if(painting&&p&&!painting.single){const k=p.x+','+p.z;if(k!==painting.last){painting.last=k;if(painting.mode==='transfer')transferAt(p.x,layer,p.z);else applyAt(p.x,p.z,painting.mode);dirty()}}
   if(e.pointerType==='mouse'){const hk=p?p.x+','+p.z:'',ok=hover?hover.x+','+hover.z:'';if(hk!==ok){hover=p;drawGrid()}}});
-function endPaint(){if(!painting)return;painting=null;if(undoStack.length&&undoStack[undoStack.length-1]===snap())undoStack.pop();syncUndo()}
+function endPaint(){if(!painting)return;if(painting.mode==='transfer'&&pipSkip)toast(`${pipSkip}× nicht übertragen – Hülle nur auf Hülle, Geräte nur auf dasselbe Gerät.`);painting=null;if(undoStack.length&&undoStack[undoStack.length-1]===snap())undoStack.pop();syncUndo()}
 grid.addEventListener('pointerup',endPaint);grid.addEventListener('pointercancel',endPaint);
 grid.addEventListener('pointerleave',()=>{if(hover){hover=null;drawGrid()}});
 
@@ -961,12 +977,13 @@ function hover3D(px,py){const mode=tool==='pan'||!V.edit?null:tool,hit=mode?pick
 function edit3D(px,py,mode){const hit=pick3D(px,py),c=target3D(hit,mode);
   if(c==='out'){toast('Dort ist das Raster zu Ende – vergrößere es in den Grundeinstellungen.');return}
   if(!c){if(mode==='paint')toast('Tippe auf einen Block oder auf die markierte Ebene.');else if(mode==='edit')toast('Tippe auf einen bestehenden Block, um ihn zu ändern.');return}
-  if(mode==='pick'){pickAt(c[0],c[1],c[2]);return}
+  if(mode==='pick'&&!pipSrc){pipTake(c[0],c[1],c[2]);return}
+  if(mode==='pick'){pushUndo();pipSkip=0;transferAt(c[0],c[1],c[2]);if(pipSkip)toast('Nicht übertragen – Hülle nur auf Hülle, Geräte nur auf dasselbe Gerät.');if(undoStack[undoStack.length-1]===snap())undoStack.pop();syncUndo();dirty();return}
   if(mode==='edit'){const o=at(c[0],c[1],c[2]);if(o)openEdit(o.k);return}
   pushUndo();applyAt3(c[0],c[1],c[2],mode);if(undoStack[undoStack.length-1]===snap())undoStack.pop();syncUndo();dirty()}
 function syncViewHint(){$('#v3edit').setAttribute('aria-pressed',V.edit);$('#v3look').setAttribute('aria-pressed',!V.edit);
   $('#viewHint').textContent=!V.edit||tool==='pan'?'Ziehen dreht · zwei Finger oder Mausrad zoomen':
-    tool==='paint'?'Tippen setzt einen Block an die Fläche · Ziehen dreht':tool==='erase'?'Tippen löscht den Block · Ziehen dreht':tool==='edit'?'Tippen öffnet den Block zum Ändern · Ziehen dreht':'Tippen nimmt den Block auf · Ziehen dreht'}
+    tool==='paint'?'Tippen setzt einen Block an die Fläche · Ziehen dreht':tool==='erase'?'Tippen löscht den Block · Ziehen dreht':tool==='edit'?'Tippen öffnet den Block zum Ändern · Ziehen dreht':pipSrc?'Tippen überträgt die Eigenschaften · Pipette erneut tippen = neu aufnehmen':'Tippen nimmt einen Block auf · Ziehen dreht'}
 function resetView(){V.th=.75;V.ph=1.0;V.rad=Math.max(S.W,S.L,S.H)*1.9+4;render3D()}
 (function(){const pts=new Map();let pinch=0,start=null,moved=0,multi=false;
   const loc=e=>{const r=view.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top]};
@@ -1111,7 +1128,9 @@ function load(s){if(S)pushUndo();S=s;layer=Math.min(layer,S.H-1);syncFields();fu
 let tt=0;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),2000)}
 
 /* ---------- Bedienelemente ---------- */
-document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>setTool(b.dataset.tool));
+document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{const t=b.dataset.tool;
+  if(t==='pick'){const again=tool==='pick';pipSrc=null;setTool('pick');syncPip();toast(again?'Neu aufnehmen: tippe auf einen Block.':'Pipette: tippe auf einen Block, um ihn aufzunehmen.');return}
+  setTool(t);syncPip()});
 $('#hideAbove').onchange=e=>{hideAbove=e.target.checked;render3D()};
 $('#resetView').onclick=resetView;
 $('#lup').onclick=()=>setLayer(layer+1);$('#ldown').onclick=()=>setLayer(layer-1);
