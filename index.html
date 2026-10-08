@@ -91,6 +91,9 @@ input[type=number]{width:4.2em;font-family:var(--f-mono);font-variant-numeric:ta
 .gtop{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 2px 6px}
 .orient{font-family:var(--f-mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .zoom{display:flex;gap:4px}
+.ghostbtn{height:30px;padding:0 10px;border:1px solid var(--line);border-radius:15px;background:var(--panel-2);font-size:.74rem;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.ghostbtn i{font-style:normal;font-size:.9rem;color:var(--accent)}
+.ghostbtn.off{color:var(--muted)}
 .zoom button{width:34px;height:30px;border:1px solid var(--line);border-radius:6px;background:var(--panel-2);font-family:var(--f-mono);font-weight:700}
 .cwrap{flex:1 1 auto;min-height:0;overflow:auto;display:grid;-webkit-overflow-scrolling:touch}
 #grid{display:block;margin:auto;touch-action:none;cursor:crosshair;border:1px solid var(--grid-strong)}
@@ -121,7 +124,7 @@ h2{font-family:var(--f-display);font-weight:700;font-size:.9rem;letter-spacing:.
 /* Werkzeugleiste */
 .toolbar{flex:none;display:flex;flex-direction:column;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:6px}
 .trow{display:flex;gap:6px;align-items:stretch;min-width:0}
-.tools{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;min-width:0}
+.tools{flex:1;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;min-width:0}
 .tool{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;height:48px;border:1px solid var(--line);border-radius:6px;background:var(--panel-2);font-size:.66rem;font-weight:600;min-width:0;padding:0 2px}
 .tool[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .tool span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
@@ -179,6 +182,12 @@ h2{font-family:var(--f-display);font-weight:700;font-size:.9rem;letter-spacing:.
 .orgrid.sizes{grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}
 .orgrid.sizes .btn b{font-family:var(--f-mono);font-size:.95rem}
 .blk.na{opacity:.45;cursor:not-allowed}
+.matgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:4px}
+.matgrid .btn{justify-content:flex-start;gap:6px;min-height:40px;padding:4px 6px;font-size:.7rem;font-weight:600;text-align:left;line-height:1.15}
+.matgrid .btn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+#editModal .shapes{grid-template-columns:repeat(6,minmax(0,1fr))}
+#editModal .shp span{display:none}
+.eprev{width:72px;height:72px;border-radius:6px;background:var(--view-bg);display:block}
 .blk.na .tagsz{color:var(--err)}
 .orgrid .btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .orfoot{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center}
@@ -290,7 +299,8 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
   <main class="stage">
     <section class="pane gridpane" aria-label="Ebenen-Raster">
       <div class="gtop">
-        <span class="orient">▲ Bug · vorne</span>
+        <span class="orient">▲ Bug</span>
+        <button class="ghostbtn" id="ghostBtn" aria-label="Nachbarebene anzeigen: umschalten"></button>
         <div class="zoom" role="group" aria-label="Raster-Zoom">
           <button id="zOut" aria-label="Raster verkleinern">−</button>
           <button id="zFit" aria-label="Raster einpassen">⤢</button>
@@ -323,6 +333,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
       <div class="tools" role="group" aria-label="Werkzeug">
         <button class="tool" data-tool="paint" aria-pressed="true"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19.5 8.5a2.1 2.1 0 00-3-3L5 17v3z"/><path d="M14.5 7.5l3 3"/></svg><span>Setzen</span></button>
         <button class="tool" data-tool="erase" aria-pressed="false"><svg class="i" viewBox="0 0 24 24"><path d="M4 16.5L13.5 7l5.5 5.5L13 18.5H7.5z"/><path d="M9.5 11l5.5 5.5M12 20.5h8"/></svg><span>Löschen</span></button>
+        <button class="tool" data-tool="edit" aria-pressed="false"><svg class="i" viewBox="0 0 24 24"><rect x="4" y="4" width="11" height="11" rx="1.5"/><path d="M13 20l1-3.5 6-6 2.5 2.5-6 6z"/></svg><span>Ändern</span></button>
         <button class="tool" data-tool="pick" aria-pressed="false"><svg class="i" viewBox="0 0 24 24"><path d="M14 5.5l4.5 4.5"/><path d="M16.5 3.5a2.1 2.1 0 013 3L17 9l-2-2z"/><path d="M15 8L6.5 16.5 5 20l3.5-1.5L17 10"/></svg><span>Pipette</span></button>
         <button class="tool" data-tool="pan" aria-pressed="false"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M12 3L9.5 5.5M12 3l2.5 2.5M12 21l-2.5-2.5M12 21l2.5-2.5M3 12l2.5-2.5M3 12l2.5 2.5M21 12l-2.5-2.5M21 12l-2.5 2.5"/></svg><span>Schieben</span></button>
       </div>
@@ -373,6 +384,27 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
     <p class="hint">Richtung, in die die Düse das Schiff schiebt. Die Düsenöffnung zeigt in die Gegenrichtung. Die Düse liegt längs zur Schubrichtung.</p>
     <div class="orrow" id="dirSizeRow"><span class="lbl">Größe (B × H × L)</span><div class="orgrid sizes" id="dirSizes"></div></div>
     <button class="btn primary" data-close="dirModal">Fertig</button>
+  </div>
+</div>
+
+<div class="modal" id="editModal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+    <div class="shead"><span class="sw" id="editSw"></span><h3 id="editTitle">Block ändern</h3><button class="ib" data-close="editModal" aria-label="Schließen">✕</button></div>
+    <p class="hint" id="editWhere"></p>
+    <div id="editHull">
+      <div class="orrow"><span class="lbl">Material</span><div class="matgrid" id="eMat"></div></div>
+      <div class="orrow"><span class="lbl">Form</span><div class="shapes" id="eShapes"></div></div>
+      <div class="orfoot"><canvas id="ePrev" class="eprev" aria-label="Vorschau mit Pfeil nach vorne"></canvas><p class="rotname" id="eRotName"></p></div>
+      <div class="orrow"><span class="lbl">Zeigt nach</span><div class="orgrid" id="eFace"></div></div>
+      <div class="orrow"><span class="lbl">Oberseite</span><div class="orgrid" id="eUp"></div></div>
+    </div>
+    <div id="editDev">
+      <p class="msg" id="eDevInfo"></p>
+      <div class="orrow" id="eDirRow"><span class="lbl">Schubrichtung</span><div class="orgrid" id="eDir"></div></div>
+    </div>
+    <p class="hint" id="eMirror"></p>
+    <div class="row"><button class="btn" id="eTake">Als Auswahl übernehmen</button><button class="btn danger" id="eDel">Block löschen</button></div>
+    <button class="btn primary" data-close="editModal">Fertig</button>
   </div>
 </div>
 
@@ -591,7 +623,7 @@ function mirrorRot(s,r){const key=s+'|'+r;if(MIR.has(key))return MIR.get(key);
 
 /* ---------- Zustand ---------- */
 let S=null, layer=0, cur='steel', lastHull='steel', curDir='f', curShape='cube', curRot=0, curRy=0, tool='paint', mirror=true, hideAbove=false;
-let hover=null, painting=null, CELL=20, zoomF=1, undoStack=[], raf=0, saveT=0, T={}, SZ={small:Object.create(null),large:Object.create(null)}, curSz=Object.create(null);
+let ghost='below', editK=null, editMk=null, hover=null, painting=null, CELL=20, zoomF=1, undoStack=[], raf=0, saveT=0, T={}, SZ={small:Object.create(null),large:Object.create(null)}, curSz=Object.create(null);
 const K=(x,y,z)=>x+','+y+','+z, P3=k=>k.split(',').map(Number);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v|0));
 const dims=v=>[v.w||1,v.h||1,v.l||1]; // Breite(x), Höhe(y), Länge(z)
@@ -802,8 +834,11 @@ function drawGrid(){
     if(bw>1||bl>1||bh>1){ctx.strokeStyle=T.edge;ctx.lineWidth=2;ctx.strokeRect(x*cs+2,z*cs+2,bw*cs-4,bl*cs-4)}
     if(cs>=14){ctx.fillStyle=ink(t.c);const lab=t.dir?DIRS[v.d].a:t.k;ctx.fillText(lab,x*cs+bw*cs/2,z*cs+bl*cs/2+1);
       if(bh>1&&cs>=20){ctx.font=`600 ${Math.round(cs*.28)}px ui-monospace, Menlo, monospace`;ctx.fillText(`${ly-y+1}/${bh}`,x*cs+bw*cs/2,z*cs+bl*cs/2+cs*.36);ctx.font=`700 ${Math.max(9,Math.round(cs*.42))}px ui-monospace, "Roboto Mono", Menlo, monospace`}}})};
-  if(layer>0)pass(layer-1,true);
+  if(ghost==='below'&&layer>0)pass(layer-1,true);
   pass(layer,false);
+  if(ghost==='above'&&layer<S.H-1){ctx.save();ctx.globalAlpha=.55;ctx.strokeStyle=T.fg;ctx.lineWidth=1.5;ctx.setLineDash([3,3]);
+    S.blocks.forEach((v,k)=>{const [x,y,z]=P3(k),[bw,bh,bl]=dims(v);const ly=layer+1;if(ly<y||ly>=y+bh)return;
+      if(y<=layer&&y+bh>ly)return;ctx.strokeRect(x*cs+cs*.18,z*cs+cs*.18,bw*cs-cs*.36,bl*cs-cs*.36)});ctx.restore()}
   ctx.lineWidth=1;
   for(let i=0;i<=S.W;i++){ctx.strokeStyle=i%5===0?T.gridStrong:T.gridLine;ctx.beginPath();ctx.moveTo(i*cs+.5,0);ctx.lineTo(i*cs+.5,h);ctx.stroke()}
   for(let i=0;i<=S.L;i++){ctx.strokeStyle=i%5===0?T.gridStrong:T.gridLine;ctx.beginPath();ctx.moveTo(0,i*cs+.5);ctx.lineTo(w,i*cs+.5);ctx.stroke()}
@@ -848,6 +883,7 @@ grid.addEventListener('pointerdown',e=>{
   e.preventDefault();
   const mode=e.button===2?'erase':tool;
   if(mode==='pick'){pickAt(p.x,layer,p.z);return}
+  if(mode==='edit'){const o=at(p.x,layer,p.z);if(o)openEdit(o.k);else toast('Tippe auf einen bestehenden Block, um ihn zu ändern.');return}
   grid.setPointerCapture(e.pointerId);pushUndo();painting={mode,last:p.x+','+p.z,single:mode==='paint'&&isBig()};applyAt(p.x,p.z,mode);dirty();
 });
 grid.addEventListener('pointermove',e=>{const p=cellAt(e);
@@ -924,12 +960,13 @@ function hover3D(px,py){const mode=tool==='pan'||!V.edit?null:tool,hit=mode?pick
   if(JSON.stringify(V.hover)!==JSON.stringify(h)){V.hover=h;render3D()}}
 function edit3D(px,py,mode){const hit=pick3D(px,py),c=target3D(hit,mode);
   if(c==='out'){toast('Dort ist das Raster zu Ende – vergrößere es in den Grundeinstellungen.');return}
-  if(!c){if(mode==='paint')toast('Tippe auf einen Block oder auf die markierte Ebene.');return}
+  if(!c){if(mode==='paint')toast('Tippe auf einen Block oder auf die markierte Ebene.');else if(mode==='edit')toast('Tippe auf einen bestehenden Block, um ihn zu ändern.');return}
   if(mode==='pick'){pickAt(c[0],c[1],c[2]);return}
+  if(mode==='edit'){const o=at(c[0],c[1],c[2]);if(o)openEdit(o.k);return}
   pushUndo();applyAt3(c[0],c[1],c[2],mode);if(undoStack[undoStack.length-1]===snap())undoStack.pop();syncUndo();dirty()}
 function syncViewHint(){$('#v3edit').setAttribute('aria-pressed',V.edit);$('#v3look').setAttribute('aria-pressed',!V.edit);
   $('#viewHint').textContent=!V.edit||tool==='pan'?'Ziehen dreht · zwei Finger oder Mausrad zoomen':
-    tool==='paint'?'Tippen setzt einen Block an die Fläche · Ziehen dreht':tool==='erase'?'Tippen löscht den Block · Ziehen dreht':'Tippen nimmt den Block auf · Ziehen dreht'}
+    tool==='paint'?'Tippen setzt einen Block an die Fläche · Ziehen dreht':tool==='erase'?'Tippen löscht den Block · Ziehen dreht':tool==='edit'?'Tippen öffnet den Block zum Ändern · Ziehen dreht':'Tippen nimmt den Block auf · Ziehen dreht'}
 function resetView(){V.th=.75;V.ph=1.0;V.rad=Math.max(S.W,S.L,S.H)*1.9+4;render3D()}
 (function(){const pts=new Map();let pinch=0,start=null,moved=0,multi=false;
   const loc=e=>{const r=view.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top]};
@@ -1004,6 +1041,53 @@ function updateInfo(){
   const ext=S.occ.size?[mx[0]-mn[0]+1,mx[2]-mn[2]+1,mx[1]-mn[1]+1]:[0,0,0];
   $('#meta').innerHTML=`<b>${S.blocks.size}</b> Teile · Blockgröße ${fm(1)} m<br>Abmessung <b>${fm(ext[0])} × ${fm(ext[1])} × ${fm(ext[2])} m</b> (B × L × H)`;
 }
+
+/* ---------- Bestehenden Block ändern ---------- */
+const HULLS=TYPES.filter(t=>t.hull);
+$('#eMat').innerHTML=HULLS.map(t=>`<button class="btn" data-mat="${t.id}"><span class="sw" style="background:${t.c};color:${ink(t.c)}">${t.k}</span>${t.n.replace(/ \(.*\)/,'')}</button>`).join('');
+$('#eShapes').innerHTML=SHAPES.map(s=>`<button class="shp" data-es="${s.id}" aria-label="${s.n}" title="${s.n}"><canvas></canvas><span>${s.n}</span></button>`).join('');
+$('#eFace').innerHTML=SDO.map(k=>`<button class="btn" data-ef="${k}"><b>${SD[k].a}</b>${SD[k].n}</button>`).join('');
+$('#eUp').innerHTML=SDO.map(k=>`<button class="btn" data-eu="${k}"><b>${SD[k].a}</b>${SD[k].n}</button>`).join('');
+$('#eDir').innerHTML=DORDER.map(k=>`<button class="btn" data-ed="${k}"><b>${DIRS[k].a}</b>${DIRS[k].n}</button>`).join('');
+let editSnap=null,eIconMat='';
+function mirrorKeyOf(k){if(!mirror)return null;const v=S.blocks.get(k),[x,y,z]=P3(k),w=dims(v)[0],mx=S.W-x-w;if(mx===x)return null;
+  const mk=K(mx,y,z),m=S.blocks.get(mk);return m&&m.t===v.t&&JSON.stringify(dims(m))===JSON.stringify(dims(v))?mk:null}
+function openEdit(k){editK=k;editMk=mirrorKeyOf(k);editSnap=snap();pushUndo();eIconMat='';syncEdit();openModal('editModal')}
+function closeEditCleanup(){if(editSnap!==null&&snap()===editSnap){undoStack.pop();syncUndo()}editSnap=null;editK=null;editMk=null}
+function thrDims(v,nd){const [w,l,h]=dims(v),ax=v.d==='l'||v.d==='r'?0:v.d==='u'||v.d==='d'?2:1,arr=[w,l,h],len=arr[ax],o=arr.filter((_,i)=>i!==ax);
+  return nd==='l'||nd==='r'?[len,o[0],o[1]]:nd==='u'||nd==='d'?[o[0],o[1],len]:[o[0],len,o[1]]}
+function editApply(fn){if(!editK||!S.blocks.has(editK))return;
+  const apply=(k,mir)=>{const old=S.blocks.get(k),nv=fn({...old},mir),[x,y,z]=P3(k);
+    if(JSON.stringify(dims(nv))!==JSON.stringify(dims(old))){delAnchor(k);const p=placeAt(x,y,z,nv);return p?K(...p):null}
+    S.blocks.set(k,nv);return k};
+  const mk=editMk&&S.blocks.has(editMk)?editMk:null;
+  editK=apply(editK,false);if(mk)editMk=apply(mk,true);syncEdit();dirty()}
+function syncEdit(){const v=editK&&S.blocks.get(editK);if(!v){closeModal('editModal');return}
+  const t=TM[v.t],[x,y,z]=P3(editK);
+  $('#editTitle').textContent=t.n+' ändern';$('#editSw').style.background=t.c;$('#editSw').style.color=ink(t.c);$('#editSw').textContent=t.dir?DIRS[v.d].a:t.k;
+  $('#editWhere').textContent=`Ebene ${y+1} · Spalte ${x+1} · Reihe ${z+1}`+(t.hull?'':` · belegt ${dims(v)[0]}×${dims(v)[2]}×${dims(v)[1]} (B×L×H)`);
+  $('#editHull').hidden=!t.hull;$('#editDev').hidden=t.hull;
+  $('#eMirror').textContent=editMk?'Spiegeln ist an: Das gespiegelte Gegenstück wird mitgeändert.':'';
+  if(t.hull){const s=v.s||'cube',r=v.r||0,f=faceOf(r),u=upOf(r);
+    document.querySelectorAll('[data-mat]').forEach(b=>{b.setAttribute('aria-pressed',b.dataset.mat===v.t);b.disabled=!allowed(b.dataset.mat,S.cls)});
+    if(eIconMat!==v.t){eIconMat=v.t;document.querySelectorAll('[data-es]').forEach(b=>drawIcon(b.querySelector('canvas'),b.dataset.es,0,t.rgb,40))}
+    document.querySelectorAll('[data-es]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.es===s));
+    drawIcon($('#ePrev'),s,r,t.rgb,92);$('#eRotName').textContent=`${SM[s].n} · zeigt nach ${SD[f].n}, Oberseite ${SD[u].n}`;
+    document.querySelectorAll('[data-ef]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.ef===f));
+    document.querySelectorAll('[data-eu]').forEach(b=>{b.setAttribute('aria-pressed',b.dataset.eu===u);b.disabled=!perp(f,b.dataset.eu)})}
+  else{$('#eDevInfo').textContent=t.dir?'Richtung ändern; große Düsen werden dabei längs zur neuen Richtung gelegt.':'Geräte lassen sich hier löschen oder als Auswahl übernehmen. Größe und Drehung wählst du beim Setzen.';
+    $('#eDirRow').hidden=!t.dir;if(t.dir)document.querySelectorAll('[data-ed]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.ed===v.d))}}
+document.querySelectorAll('[data-mat]').forEach(b=>b.onclick=()=>editApply(v=>{v.t=b.dataset.mat;return v}));
+document.querySelectorAll('[data-es]').forEach(b=>b.onclick=()=>editApply((v,mir)=>{const s=b.dataset.es;if(s==='cube')delete v.s;else v.s=s;
+  const base=editK&&!mir?(S.blocks.get(editK).r||0):(v.r||0);let r=mir?mirrorRot(s,base):base;if(r)v.r=r;else delete v.r;return v}));
+const setRot=(v,mir,f,u)=>{let r=rotFor(f,u);if(mir)r=mirrorRot(v.s||'cube',r);if(r)v.r=r;else delete v.r;return v};
+document.querySelectorAll('[data-ef]').forEach(b=>b.onclick=()=>{const cur0=S.blocks.get(editK),u0=upOf(cur0.r||0),f=b.dataset.ef,u=perp(f,u0)?u0:['u','b','f','r','l','d'].find(k=>perp(f,k));editApply((v,mir)=>setRot(v,mir,f,u))});
+document.querySelectorAll('[data-eu]').forEach(b=>b.onclick=()=>{const cur0=S.blocks.get(editK),f=faceOf(cur0.r||0),u=b.dataset.eu;if(!perp(f,u))return;editApply((v,mir)=>setRot(v,mir,f,u))});
+document.querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>editApply((v,mir)=>{let d=b.dataset.ed;if(mir)d=d==='l'?'r':d==='r'?'l':d;
+  const [w,l,h]=thrDims(v,d);v.d=d;delete v.w;delete v.l;delete v.h;if(w>1)v.w=w;if(l>1)v.l=l;if(h>1)v.h=h;return v}));
+$('#eTake').onclick=()=>{const [x,y,z]=P3(editK);closeModal('editModal');pickAt(x,y,z)};
+$('#eDel').onclick=()=>{const k=editK,mk=editMk;if(mk&&S.blocks.has(mk))delAnchor(mk);delAnchor(k);editK=null;closeModal('editModal');dirty();toast('Block gelöscht')};
+new MutationObserver(()=>{if($('#editModal').hidden&&editSnap!==null)closeEditCleanup()}).observe($('#editModal'),{attributes:true,attributeFilter:['hidden']});
 
 /* ---------- Gerätegrößen ---------- */
 function renderSizes(){
@@ -1130,6 +1214,11 @@ if(st.sizes2&&st.sizes2.small&&st.sizes2.large)SZ={small:np(st.sizes2.small),lar
 try{S=st.last?deserialize(st.last):null}catch(e){S=null}
 if(!S){S=sample();layer=2}else layer=clamp(st.layer||0,0,S.H-1);
 renderDrawer();renderShapeGrid();syncViewHint();
+const GH={below:['↓','darunter'],above:['↑','darüber'],off:['○','keine']};
+function syncGhost(){const [i,txt]=GH[ghost];$('#ghostBtn').innerHTML=`<i>${i}</i>Ebene ${txt}`;$('#ghostBtn').classList.toggle('off',ghost==='off');
+  $('#ghostBtn').title='Blass angezeigt: Ebene '+txt+' – tippen zum Umschalten'}
+$('#ghostBtn').onclick=()=>{ghost=ghost==='below'?'above':ghost==='above'?'off':'below';syncGhost();drawGrid();try{const o=store();o.ghost=ghost;storeSet(o)}catch(e){}};
+if(GH[st.ghost])ghost=st.ghost;syncGhost();
 /* Haftungsausschluss: beim ersten Start bestätigen, danach im Menü */
 $('#discBtn').onclick=()=>{$('#discX').hidden=false;openModal('discModal')};
 $('#discOk').onclick=()=>{const o=store();o.disclaimer=1;storeSet(o);closeModal('discModal')};
