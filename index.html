@@ -1121,7 +1121,7 @@ function sceneFaces(){
   const faces=[],wx=S.W/2,wy=S.H/2,wz=S.L/2,Wd=p=>[p[0]-wx,p[1]-wy,p[2]-wz];
   const hidden=(v,k)=>hideAbove&&P3(k)[1]>layer;
   const covers=(x,y,z,side,me)=>{const o=at(x,y,z);if(!o||hidden(o.v,o.k))return false;const t=TM[o.v.t];
-    if(t.a&&!(me&&me.a&&o.v.t===me.id))return false;if(!t.hull)return true;return geo(o.v.s||'cube',o.v.r||0).full[side]};
+    if(t.a&&!(me&&me.a&&o.v.t===me.id))return false;if(!t.hull)return !KIND[o.v.t];return geo(o.v.s||'cube',o.v.r||0).full[side]};
   S.blocks.forEach((v,k)=>{if(hidden(v,k))return;const [x,y,z]=P3(k),t=TM[v.t];
     if(t.hull){const g=geo(v.s||'cube',v.r||0);
       for(const f of g.faces){if(f.side>=0){const n=NB[f.side];if(covers(x+n[0],y+n[1],z+n[2],f.side^1,t))continue}
