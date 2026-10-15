@@ -652,6 +652,53 @@ const TYPES=[
   {id:'furnace',n:'Schmelzofen',g:'Spezialgeräte',c:'#c46b2b',k:'Of'},
   {id:'decon',n:'Dekonstruktor',g:'Spezialgeräte',c:'#7f8f5a',k:'Dk'},
 ];
+/* Weitere Bauteile aus der Vanilla-Blockliste: [Größe B×H×L, Masse kg, CPU, Strom kW, Wert, Level] je Gruppe (small = SV, hv = Abweichung HV, large = CV/BA, ba = Abweichung BA) */
+const ALL=['SV','HV','CV','BA'];
+const EXTRA=[
+  {id:'awindow',n:'Panzerglas',g:'Hülle',c:'#5b9cbf',k:'PG',a:.6,cls:ALL,small:[['1x1x1',62,0,0,0,1]],large:[['1x1x1',600,0,0,0,1]]},
+  {id:'hwindow',n:'Schweres Fenster',g:'Hülle',c:'#4f88a8',k:'SF',a:.6,cls:['CV','BA'],large:[['1x1x1',880,0,0,0,1]]},
+  {id:'aconcrete',n:'Panzerbeton',g:'Hülle',c:'#8d8a82',k:'PB',cls:['BA'],large:[['1x1x1',4000,0,0,0,1]]},
+  {id:'truss',n:'Gerüst / Träger',g:'Hülle',c:'#9aa2ab',k:'Gr',cls:ALL,small:[['1x1x1',15,0,0,0,1]],large:[['1x1x1',250,0,0,0,1]]},
+  {id:'thrusterT2',n:'Schubdüse T2',g:'Antrieb',c:'#e2702a',k:'',dir:true,cls:['SV','HV'],small:[['1x1x2',520,168,36,230,10],['1x1x3',842,277,43,380,12]],hv:[['1x1x2',485,120,58,185,10],['1x1x3',473,198,80,345,12]]},
+  {id:'jet',n:'Jet-Düse',g:'Antrieb',c:'#f09a3c',k:'',dir:true,cls:['SV','HV'],small:[['1x1x3',743,220,52,300,10],['2x2x5',1240,1470,216,2075,12],['3x3x7',2430,4680,360,7240,15],['3x3x10',3060,6750,425,11040,17],['3x3x13',4833,8870,500,15290,20]],hv:[['1x1x3',743,180,54,250,12]]},
+  {id:'rcsT2',n:'RCS T2',g:'Antrieb',c:'#9a52c4',k:'R2',cls:['CV'],large:[['1x1x1',19165,12,50,150000,10]]},
+  {id:'hoverBoost',n:'Schwebe-Booster',g:'Antrieb',c:'#6a70c8',k:'VB',cls:['HV'],small:[['1x1x2',260,50,5,0,5]]},
+  {id:'wing',n:'Flügel',g:'Antrieb',c:'#7d8894',k:'Fl',cls:['SV'],small:[['1x1x1',300,0,0,0,1]]},
+  {id:'cargoCtrl',n:'Container-Controller',g:'Logistik & Produktion',c:'#93763f',k:'CC',cls:ALL,small:[['1x1x1',55,15,1,0,3]],large:[['1x1x1',625,960,1,0,5]]},
+  {id:'cargoExt',n:'Container-Erweiterung',g:'Logistik & Produktion',c:'#b39663',k:'CE',cls:ALL,small:[['1x1x1',52,15,1,0,5]],large:[['1x1x1',616,960,1,0,7]]},
+  {id:'harvest',n:'Ernte-Controller',g:'Logistik & Produktion',c:'#7e9a4a',k:'EC',cls:['SV','HV','CV'],small:[['1x1x1',52,15,1,0,3]],large:[['1x1x1',625,960,1,0,20]]},
+  {id:'ammoCtrl',n:'Munitions-Controller',g:'Logistik & Produktion',c:'#7c6d48',k:'MC',cls:ALL,small:[['1x1x1',52,15,1,0,3]],large:[['1x1x1',625,960,1,0,5]]},
+  {id:'locker',n:'Rüstungsspind',g:'Logistik & Produktion',c:'#6d7f93',k:'RS',cls:ALL,small:[['1x2x1',120,0,1,0,5]],large:[['1x1x1',405,0,1,0,5]]},
+  {id:'seat',n:'Passagiersitz',g:'Ausstattung',c:'#5e7aa0',k:'Si',cls:ALL,small:[['1x1x2',72,0,1,0,3],['2x2x3',705,0,1,0,5]],large:[['1x1x1',72,0,1,0,10]]},
+  {id:'repairSt',n:'Reparaturstation',g:'Spezialgeräte',c:'#5a9a6e',k:'RS',cls:['CV','BA'],large:[['1x2x1',1070,2500,20,0,7]]},
+  {id:'repairCon',n:'Reparaturkonsole',g:'Spezialgeräte',c:'#4f8f66',k:'RK',cls:['CV','BA'],large:[['1x1x1',630,2500,20,0,12]]},
+  {id:'repair2',n:'Reparaturbucht T2',g:'Spezialgeräte',c:'#3f8a5e',k:'R2',cls:['CV','BA'],large:[['1x1x1',11770,50000,20000,0,20]],ba:[['1x1x1',14556,25000,25000,0,20]]},
+  {id:'offline',n:'Offline-Schutz',g:'Spezialgeräte',c:'#5b6a8a',k:'OS',cls:['CV','BA'],large:[['2x2x2',7500,0,50,0,7]]},
+  {id:'landclaim',n:'Landanspruch-Gerät',g:'Spezialgeräte',c:'#8a6a4a',k:'LA',cls:['BA'],large:[['2x2x2',2710,0,10,0,10]]},
+  {id:'atm',n:'Bankautomat',g:'Spezialgeräte',c:'#6a8a6a',k:'Bk',cls:['BA'],large:[['1x1x1',505,0,5,0,10]]},
+  {id:'forcefield',n:'Kraftfeld-Emitter',g:'Spezialgeräte',c:'#5ab0d8',k:'KF',cls:ALL,small:[['1x1x1',40,0,10,0,7]],large:[['1x1x1',40,0,10,0,7]]},
+  {id:'remote',n:'Fernsteuerung',g:'Spezialgeräte',c:'#607080',k:'FS',cls:ALL,small:[['1x1x1',160,0,5,0,3]],large:[['1x1x1',160,0,5,0,3]]},
+  {id:'antenna',n:'Antenne',g:'Spezialgeräte',c:'#8792a0',k:'An',cls:['CV','BA'],large:[['1x3x1',6290,0,10,0,1]]},
+  {id:'radar',n:'Radar',g:'Spezialgeräte',c:'#75808c',k:'Rd',cls:ALL,small:[['3x2x3',5150,0,10,0,1]],large:[['3x2x3',5150,0,10,0,1]]},
+  {id:'spotlight',n:'Scheinwerfer',g:'Ausstattung',c:'#e8d27a',k:'Sw',cls:['SV','HV','CV'],small:[['1x1x1',85,0,2,0,1]],large:[['1x1x1',85,0,2,0,1]]},
+  {id:'docking',n:'Andockplatte',g:'Ausstattung',c:'#7a8590',k:'AP',cls:['HV'],small:[['1x1x2',122,0,1,0,1]]},
+  {id:'lcd',n:'LCD-Bildschirm',g:'Ausstattung',c:'#3a4e60',k:'LC',cls:ALL,small:[['1x1x1',2,0,1,0,1]],large:[['1x1x1',2,0,1,0,1]]},
+  {id:'sensor',n:'Sensor / Auslöser',g:'Ausstattung',c:'#a08a5a',k:'Se',cls:ALL,small:[['1x1x1',.4,0,1,0,1]],large:[['1x1x1',1,0,1,0,1]]},
+  {id:'vent',n:'Lüftung',g:'Ausstattung',c:'#8a96a2',k:'Lü',cls:ALL,small:[['1x1x1',10,0,1,0,3]],large:[['1x1x1',10,0,1,0,3]]},
+  {id:'ramp',n:'Rampe',g:'Ausstattung',c:'#8d7c6a',k:'Rm',cls:ALL,small:[['1x1x1',150,0,1,0,5]],large:[['1x1x1',790,0,1,0,5]]},
+  {id:'shutter',n:'Rolltor',g:'Ausstattung',c:'#87786a',k:'Rt',cls:ALL,small:[['1x1x1',80,0,1,0,3]],large:[['1x1x1',782,0,1,0,5]]},
+  {id:'doorArm',n:'Panzertür',g:'Ausstattung',c:'#6f6258',k:'PT',cls:['CV','BA'],large:[['1x1x1',910,0,1,0,7]]},
+  {id:'hangar',n:'Hangartor',g:'Ausstattung',c:'#6a6f78',k:'HT',cls:['CV','BA'],large:[['1x1x1',8000,0,1,0,7]]},
+  {id:'blast',n:'Explosionsschutztür',g:'Ausstattung',c:'#5f6066',k:'ET',cls:['CV','BA'],large:[['1x1x1',4860,0,1,0,12]]},
+  {id:'boarding',n:'Einstiegsrampe',g:'Ausstattung',c:'#7a6e60',k:'ER',cls:['CV','BA'],large:[['1x1x1',3400,0,1,0,7]]},
+  {id:'walkway',n:'Laufsteg',g:'Ausstattung',c:'#9aa0a6',k:'LS',cls:ALL,small:[['1x1x1',12,0,0,0,1]],large:[['1x1x1',195,0,0,0,1]]},
+  {id:'stairs',n:'Treppe',g:'Ausstattung',c:'#a0968a',k:'Tr',cls:['CV','BA'],large:[['1x1x1',585,0,0,0,1]]},
+  {id:'ladder',n:'Leiter',g:'Ausstattung',c:'#a3a9ae',k:'Le',cls:['CV','BA'],large:[['1x1x1',30,0,0,0,1]]},
+  {id:'elevator',n:'Aufzug',g:'Ausstattung',c:'#8a9aa8',k:'Az',cls:['CV','BA'],large:[['1x1x1',80,0,5,0,5]]},
+  {id:'console',n:'Konsole',g:'Ausstattung',c:'#4f6274',k:'Ko',cls:['CV','BA'],large:[['1x1x1',175,0,1,0,1]]},
+  {id:'deco',n:'Dekoration',g:'Ausstattung',c:'#9a8a7a',k:'Dk',cls:ALL,small:[['1x1x1',115,0,0,0,1]],large:[['1x1x1',100,0,0,0,1]]},
+  {id:'plant',n:'Zimmerpflanze',g:'Ausstattung',c:'#5f9a4a',k:'Pf',cls:['CV','BA'],large:[['1x1x1',7,0,0,0,1]]}];
+EXTRA.forEach(e=>{const {cls,small,hv,large,ba,...t}=e;TYPES.push(t)});
 /* Wo ein Block erlaubt ist (aus der Blockliste); fehlt ein Eintrag, ist er überall erlaubt */
 const np=o=>Object.assign(Object.create(null),o||{});
 const ALLOW=np({concrete:['BA'],solar:['BA'],cockpit:['CV','SV','HV'],rcs:['CV','SV','HV'],thruster:['CV','SV','HV'],hover:['HV'],warp:['CV','SV'],
@@ -660,6 +707,7 @@ const ALLOW=np({concrete:['BA'],solar:['BA'],cockpit:['CV','SV','HV'],rcs:['CV',
   tMinigun:['SV','HV','CV','BA'],tCannon:['CV','BA'],tRocket:['HV','CV','BA'],tFlak:['CV','BA'],tPulse:['CV','BA'],tPlasma:['HV','CV','BA'],tArty:['HV','CV','BA'],
   tTool:['HV','CV'],tDrill:['HV','CV'],sentry:['CV','BA'],dSv:['SV'],dHv:['HV'],dHvL:['HV'],dHvT2:['HV'],dCv:['CV'],saw:['HV'],
   detector:['SV','HV','CV'],repair:['CV','BA'],teleporter:['CV','BA'],gravity:['CV','BA'],shield2:['CV','BA'],furnace:['BA'],decon:['BA']});
+EXTRA.forEach(e=>{if(e.cls.length<4)ALLOW[e.id]=e.cls});
 const allowed=(t,cls)=>!ALLOW[t]||ALLOW[t].includes(cls);
 /* Gerätegrößen aus der Blockliste, wie im Spiel: Breite × Höhe × Länge */
 const DEF_SZ={
@@ -670,6 +718,8 @@ const DEF_SZ={
     tMinigun:['3x1x3'],tRocket:['3x1x3'],tPlasma:['3x1x3'],tArty:['5x2x5'],tTool:['3x1x3'],tDrill:['3x1x3'],dSv:['1x1x6'],dHv:['1x1x6'],dHvL:['3x3x8'],dHvT2:['1x1x6'],saw:['5x1x2'],
     pentaxid:['1x1x2'],generator:['1x1x1','1x2x1'],cockpit:['1x1x2','3x1x3'],thruster:['1x1x1','1x1x2','1x1x3'],hover:['1x1x1','2x1x2'],warp:['1x1x2'],constructor:['1x1x2','1x2x1'],shield:['1x1x1'],weapon:['1x1x3','1x1x4'],turret:['1x1x1','2x2x2'],drill:['1x1x3','1x1x4']}};
 const parseSizes=str=>{const out=[],re=/(\d+)\s*[x×*]\s*(\d+)\s*[x×*]\s*(\d+)/gi;let m;while((m=re.exec(String(str))))out.push([m[1],m[2],m[3]].map(n=>Math.max(1,Math.min(16,+n))));return out};
+EXTRA.forEach(e=>{if(e.g==='Hülle')return;const sm=e.small||e.hv,lg=e.large;if(sm)DEF_SZ.small[e.id]=sm.map(x=>x[0]);if(lg)DEF_SZ.large[e.id]=lg.map(x=>x[0])});
+DEF_SZ.large.generator.push('6x2x2');DEF_SZ.large.fuel.push('2x2x1');DEF_SZ.large.constructor.push('1x1x1');DEF_SZ.large.solar=['1x1x1','1x2x1','3x1x2'];DEF_SZ.small.gear=['1x1x1','2x1x2'];
 for(const g in DEF_SZ){DEF_SZ[g]=np(DEF_SZ[g]);for(const t in DEF_SZ[g])DEF_SZ[g][t]=parseSizes(DEF_SZ[g][t].join(','))}
 const fmtSz=a=>a.join('×');
 const TM=Object.create(null);
@@ -901,7 +951,7 @@ function renderShapeGrid(){
   $('#shapeGrid').innerHTML=SHAPES.map(s=>`<button class="shp" data-s="${s.id}" aria-label="${s.n}"><canvas></canvas><span>${s.n.replace('Viertelblock','Viertel\u00ADblock').replace('Außenecke','Außen\u00ADecke').replace('Eckpyramide','Eck\u00ADpyramide').replace('Innenecke','Innen\u00ADecke').replace('abgeschrägt','abge\u00ADschrägt')}</span></button>`).join('');
   $('#shapeGrid').querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{curShape=b.dataset.s;if(!TM[cur].hull)cur=lastHull;syncUI()});
   $('#dirGrid').innerHTML=DORDER.map(k=>`<button class="btn" data-d="${k}"><b>${DIRS[k].a}</b>${DIRS[k].n}</button>`).join('');
-  $('#dirGrid').querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{curDir=b.dataset.d;cur='thruster';syncUI()});
+  $('#dirGrid').querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{curDir=b.dataset.d;if(!TM[cur].dir)cur='thruster';syncUI()});
 }
 $('#faceGrid').innerHTML=SDO.map(k=>`<button class="btn" data-face="${k}"><b>${SD[k].a}</b>${SD[k].n}</button>`).join('');
 $('#upGrid').innerHTML=SDO.map(k=>`<button class="btn" data-up="${k}"><b>${SD[k].a}</b>${SD[k].n}</button>`).join('');
@@ -1076,9 +1126,83 @@ function sceneFaces(){
     if(t.hull){const g=geo(v.s||'cube',v.r||0);
       for(const f of g.faces){if(f.side>=0){const n=NB[f.side];if(covers(x+n[0],y+n[1],z+n[2],f.side^1,t))continue}
         faces.push({n:f.n,pts:f.pts.map(p=>Wd([x+p[0],y+p[1],z+p[2]])),c:Wd([x+f.c[0],y+f.c[1],z+f.c[2]]),rgb:t.rgb,a:t.a})}}
-    else{const [w,h,l]=dims(v),push=v.d?DIRS[v.d].v:null;
-      for(const f of boxFaces(x,y,z,x+w,y+h,z+l))faces.push({n:f.n,pts:f.pts.map(Wd),rgb:t.rgb,noz:push&&f.n[0]===-push[0]&&f.n[1]===-push[1]&&f.n[2]===-push[2]})}});
+    else{const [w,h,l]=dims(v),M=devMesh(v.t,w,h,l,v.d);
+      if(M)for(const f of M)faces.push({n:f.n,pts:f.pts.map(p=>Wd([x+p[0],y+p[1],z+p[2]])),c:Wd([x+f.c[0],y+f.c[1],z+f.c[2]]),rgb:f.rgb,a:f.a});
+      else{const push=v.d?DIRS[v.d].v:null;for(const f of boxFaces(x,y,z,x+w,y+h,z+l))faces.push({n:f.n,pts:f.pts.map(Wd),rgb:t.rgb,noz:push&&f.n[0]===-push[0]&&f.n[1]===-push[1]&&f.n[2]===-push[2]})}}});
   return faces}
+
+/* ---------- Geräte-Formen, angelehnt an das Aussehen im Spiel ----------
+   Jede Form wird in einem Grundrahmen gebaut: Breite W (x), Höhe H (y), Länge L (z), vorne bei z=0, hinten (Düsenaustritt) bei z=L.
+   Danach wird sie in die echte Lage gedreht. Teile sind konvexe Körper (Hülle aus Punkten). */
+const MESH=new Map(),C_MET=[152,160,170],C_DRK=[44,48,55],C_GLASS=[125,195,230];
+const KIND={thruster:'thr',thrusterT2:'thr',jet:'jet',wGatling:'gat',weapon:'gat',wRail:'rail',wPlasma:'plasma',wPulse:'laser',wCvPulse:'laser',
+  wRocket:'rocket',wHoming:'rocket',wCvRocket:'rocket',tMinigun:'tur',tCannon:'turC',tFlak:'tur',turret:'tur',sentry:'tur',tRocket:'turR',tPulse:'turL',tPlasma:'turL',
+  tArty:'turA',tTool:'turT',tDrill:'turT',dSv:'drill',dHv:'drill',dHvL:'drill',dHvT2:'drill',dCv:'drill',drill:'drill',saw:'saw',
+  fuel:'tank',o2:'tank',pentaxid:'tank',generator:'gen',cockpit:'cockpit',hover:'hover',hoverBoost:'hover',rcs:'rcs',rcsT2:'rcs',gear:'gear',
+  light:'light',spotlight:'light',shield:'shield',shield2:'shield',solar:'solar',detector:'dish',radar:'dish',antenna:'mast',warp:'warp',
+  cpu2:'cpu',cpu3:'cpu',cpu4:'cpu',teleporter:'pad',clone:'pod',medstation:'pod',repair:'pod',repair2:'pod',gravity:'orb',
+  cargo:'crate',ammo:'crate',cargoCtrl:'crate',cargoExt:'crate',ammoCtrl:'crate',harvest:'crate',locker:'crate',
+  constructor:'machine',furnace:'machine',decon:'machine',food:'machine',repairSt:'machine',repairCon:'machine',offline:'machine',atm:'machine',console:'machine'};
+const LONG=new Set(['gat','rail','plasma','laser','rocket','drill','tank','warp']);
+function devMesh(t,w,h,l,d){const kind=KIND[t];if(!kind)return null;
+  let dir=d||'f';if(!d&&LONG.has(kind)&&w>l)dir='l';
+  const key=t+'|'+w+'|'+h+'|'+l+'|'+dir;let M=MESH.get(key);if(M)return M;
+  const D=DIRS[dir].v,ax=D[0]?0:D[1]?1:2,sg=D[ax],ext=[w,h,l],cr=ax===0?[2,1]:ax===1?[0,2]:[0,1];
+  const W=ext[cr[0]],H=ext[cr[1]],L=ext[ax];
+  /* Grundrahmen → echte Lage: vorne (Schubrichtung) liegt bei z=0 */
+  const map=p=>{const o=[0,0,0];o[cr[0]]=p[0];o[cr[1]]=p[1];o[ax]=sg<0?p[2]:L-p[2];return o};
+  const parts=[],rgb=TM[t].rgb;
+  const add=(pts,c,a)=>parts.push({pts,c,a});
+  const bx=(x0,y0,z0,x1,y1,z1,c,a)=>add([[x0,y0,z0],[x1,y0,z0],[x0,y1,z0],[x1,y1,z0],[x0,y0,z1],[x1,y0,z1],[x0,y1,z1],[x1,y1,z1]],c,a);
+  const ring=(axi,a,cu,cv,r,n)=>{const o=[];for(let i=0;i<n;i++){const t2=(i+.5)/n*6.2832,p=[0,0,0],uv=axi===2?[0,1]:axi===1?[0,2]:[2,1];
+      p[axi]=a;p[uv[0]]=cu+Math.cos(t2)*r;p[uv[1]]=cv+Math.sin(t2)*r;o.push(p)}return o};
+  const cyl=(axi,a0,a1,cu,cv,r0,r1,c,a,n)=>add(ring(axi,a0,cu,cv,r0,n||8).concat(r1>0?ring(axi,a1,cu,cv,r1,n||8):[(()=>{const p=[0,0,0],uv=axi===2?[0,1]:axi===1?[0,2]:[2,1];p[axi]=a1;p[uv[0]]=cu;p[uv[1]]=cv;return p})()]),c,a);
+  const m=Math.min(W,H),cx=W/2,cy=H/2,e=.06*m,G=(r,g,b)=>[r,g,b];
+  switch(kind){
+    case 'thr':bx(e,e,0,W-e,H-e,L*.55,rgb);cyl(2,L*.55,L*.97,cx,cy,.32*m,.47*m,C_MET);cyl(2,L*.97,L,cx,cy,.4*m,.4*m,C_DRK);break;
+    case 'jet':cyl(2,0,L*.72,cx,cy,.36*m,.47*m,rgb,1,10);cyl(2,L*.3,L*.36,cx,cy,.49*m,.49*m,C_MET,1,10);cyl(2,L*.72,L*.98,cx,cy,.45*m,.36*m,C_MET,1,10);cyl(2,L*.98,L,cx,cy,.32*m,.32*m,C_DRK,1,10);break;
+    case 'rcs':bx(.15*W,.15*H,.15*L,.85*W,.85*H,.85*L,rgb);bx(.38*W,.38*H,0,.62*W,.62*H,.15*L,C_DRK);bx(.38*W,.38*H,.85*L,.62*W,.62*H,L,C_DRK);
+      bx(0,.38*H,.38*L,.15*W,.62*H,.62*L,C_DRK);bx(.85*W,.38*H,.38*L,W,.62*H,.62*L,C_DRK);bx(.38*W,.85*H,.38*L,.62*W,H,.62*L,C_DRK);break;
+    case 'gat':bx(.1*W,.05*H,.45*L,.9*W,.7*H,L,rgb);cyl(2,.38*L,.46*L,cx,.42*H,.26*m,.26*m,C_MET);
+      for(const [ox,oy] of [[-.11,-.06],[.11,-.06],[0,.12]])cyl(2,0,.4*L,cx+ox*m,.42*H+oy*m,.07*m,.07*m,C_DRK,1,6);break;
+    case 'rail':bx(.12*W,.05*H,.5*L,.88*W,.7*H,L,rgb);bx(.2*W,.25*H,0,.36*W,.55*H,.52*L,C_MET);bx(.64*W,.25*H,0,.8*W,.55*H,.52*L,C_MET);bx(.4*W,.33*H,.04*L,.6*W,.47*H,.5*L,G(110,200,255));break;
+    case 'plasma':bx(.1*W,.05*H,.55*L,.9*W,.72*H,L,rgb);cyl(2,.1*L,.57*L,cx,.42*H,.22*m,.28*m,C_MET);cyl(2,0,.1*L,cx,.42*H,.2*m,.25*m,G(230,120,220));break;
+    case 'laser':bx(.12*W,.05*H,.5*L,.88*W,.7*H,L,rgb);cyl(2,.06*L,.52*L,cx,.42*H,.12*m,.16*m,C_MET);cyl(2,0,.06*L,cx,.42*H,.15*m,.12*m,G(255,80,70));break;
+    case 'rocket':bx(.06*W,.06*H,.02*L,.94*W,.9*H,L,rgb);for(const ox of [.3,.7])for(const oy of [.3,.66])bx((ox-.12)*W,(oy-.12)*H,0,(ox+.12)*W,(oy+.12)*H,.03*L,C_DRK);break;
+    case 'tur':case 'turC':case 'turR':case 'turL':case 'turA':case 'turT':{
+      const mm=Math.min(W,L);cyl(1,0,.3*H,W/2,L/2,.48*mm,.42*mm,C_MET,1,8);
+      const hy0=.3*H,hy1=kind==='turA'?.95*H:.85*H;bx(.2*W,hy0,.25*L,.8*W,hy1,.85*L,rgb);const by=(hy0+hy1)/2;
+      if(kind==='tur'){for(const ox of [-.09,.09])cyl(2,0,.27*L,W/2+ox*mm,by,.05*mm,.05*mm,C_DRK,1,6)}
+      else if(kind==='turC')cyl(2,0,.27*L,W/2,by,.09*mm,.07*mm,C_DRK);
+      else if(kind==='turR')for(const ox of [-.12,.12])for(const oy of [-.12,.12])bx(W/2+(ox-.08)*mm,by+(oy-.08)*(hy1-hy0),.21*L,W/2+(ox+.08)*mm,by+(oy+.08)*(hy1-hy0),.25*L,C_DRK);
+      else if(kind==='turL'){cyl(2,.04*L,.27*L,W/2,by,.08*mm,.08*mm,C_MET);cyl(2,0,.04*L,W/2,by,.1*mm,.08*mm,t==='tPlasma'?G(230,120,220):G(255,80,70))}
+      else if(kind==='turA')cyl(2,0,.27*L,W/2,by,.1*mm,.08*mm,C_DRK);
+      if(kind==='turT')cyl(2,.25*L,0,W/2,by,.16*mm,0,C_MET);break}
+    case 'drill':bx(.12*W,.12*H,.62*L,.88*W,.88*H,L,rgb);cyl(2,.62*L,.5*L,cx,cy,.42*m,.4*m,C_MET);cyl(2,.5*L,0,cx,cy,.4*m,0,G(170,175,180),1,8);break;
+    case 'saw':bx(.1*W,.1*H,.5*L,.9*W,.6*H,L,rgb);cyl(1,.3*H,.42*H,W/2,.3*L,Math.min(W/2,.35*L),Math.min(W/2,.35*L),C_MET,1,12);break;
+    case 'tank':cyl(2,.06*L,.94*L,cx,cy,.46*m,.46*m,rgb,1,10);cyl(2,0,.06*L,cx,cy,.36*m,.44*m,C_MET,1,10);cyl(2,.94*L,L,cx,cy,.44*m,.36*m,C_MET,1,10);break;
+    case 'gen':bx(.06*W,0,.06*L,.94*W,.75*H,.94*L,rgb);bx(.06*W,.75*H,.06*L,.94*W,.82*H,.94*L,C_DRK);cyl(1,.82*H,H,W/2,L/2,.3*Math.min(W,L),.24*Math.min(W,L),C_MET);
+      bx(.2*W,.15*H,0,.8*W,.6*H,.06*L,C_DRK);break;
+    case 'cockpit':bx(.04*W,0,.04*L,.96*W,.5*H,.96*L,rgb);add([[.06*W,.5*H,.06*L],[.94*W,.5*H,.06*L],[.06*W,.5*H,.94*L],[.94*W,.5*H,.94*L],[.22*W,.95*H,.4*L],[.78*W,.95*H,.4*L],[.22*W,.95*H,.88*L],[.78*W,.95*H,.88*L]],C_GLASS,.65);break;
+    case 'hover':bx(.05*W,.45*H,.05*L,.95*W,H,.95*L,rgb);cyl(1,.45*H,0,W/2,L/2,.44*Math.min(W,L),.36*Math.min(W,L),G(120,190,255),1,10);break;
+    case 'gear':bx(.1*W,.82*H,.1*L,.9*W,H,.9*L,C_MET);bx(.4*W,.15*H,.4*L,.6*W,.82*H,.6*L,rgb);bx(.15*W,0,.15*L,.85*W,.15*H,.85*L,C_DRK);break;
+    case 'light':bx(.25*W,.25*H,.25*L,.75*W,.75*H,.75*L,G(255,236,160));break;
+    case 'shield':{const mm=Math.min(W,L);bx(.05*W,0,.05*L,.95*W,.35*H,.95*L,rgb);
+      add(ring(1,.35*H,W/2,L/2,.46*mm,10).concat(ring(1,.7*H,W/2,L/2,.36*mm,10),[[W/2,H,L/2]]),G(90,200,235),.55);break}
+    case 'solar':bx(.4*W,0,.4*L,.6*W,.5*H,.6*L,C_MET);bx(0,.5*H,0,W,.62*H,L,G(40,70,120));break;
+    case 'dish':{const mm=Math.min(W,L);cyl(1,0,.35*H,W/2,L/2,.18*mm,.14*mm,C_MET);cyl(1,.35*H,.8*H,W/2,L/2,.12*mm,.48*mm,rgb,1,10);bx(W/2-.04*mm,.6*H,L/2-.04*mm,W/2+.04*mm,H,L/2+.04*mm,C_DRK);break}
+    case 'mast':bx(.4*W,0,.4*L,.6*W,H,.6*L,C_MET);bx(.1*W,.7*H,.45*L,.9*W,.76*H,.55*L,rgb);bx(.2*W,.45*H,.45*L,.8*W,.5*H,.55*L,rgb);break;
+    case 'warp':cyl(2,.05*L,.95*L,cx,cy,.42*m,.42*m,rgb,1,10);for(const zz of [.2,.5,.8])cyl(2,(zz-.05)*L,(zz+.05)*L,cx,cy,.48*m,.48*m,C_MET,1,10);
+      cyl(2,0,.05*L,cx,cy,.3*m,.38*m,G(170,120,255),1,10);cyl(2,.95*L,L,cx,cy,.38*m,.3*m,G(170,120,255),1,10);break;
+    case 'cpu':bx(.05*W,.05*H,.05*L,.95*W,.95*H,.95*L,rgb);bx(.03*W,.3*H,.03*L,.97*W,.38*H,.97*L,C_DRK);bx(.03*W,.62*H,.03*L,.97*W,.7*H,.97*L,G(120,230,200));break;
+    case 'pad':{const mm=Math.min(W,L);cyl(1,0,.2*H,W/2,L/2,.48*mm,.46*mm,C_MET,1,10);cyl(1,.2*H,.26*H,W/2,L/2,.4*mm,.4*mm,G(110,230,255),1,10);break}
+    case 'pod':{const mm=Math.min(W,L);bx(.05*W,0,.05*L,.95*W,.15*H,.95*L,C_MET);cyl(1,.15*H,.86*H,W/2,L/2,.4*mm,.4*mm,C_GLASS,.5,10);bx(.05*W,.86*H,.05*L,.95*W,H,.95*L,rgb);break}
+    case 'orb':{const mm=Math.min(W,L);bx(.05*W,0,.05*L,.95*W,.3*H,.95*L,rgb);add(ring(1,.3*H,W/2,L/2,.25*mm,8).concat(ring(1,.6*H,W/2,L/2,.42*mm,8),ring(1,.9*H,W/2,L/2,.25*mm,8)),G(150,130,240));break}
+    case 'crate':bx(.04*W,0,.04*L,.96*W,.88*H,.96*L,rgb);bx(0,.88*H,0,W,H,L,C_DRK);break;
+    case 'machine':bx(.04*W,0,.04*L,.96*W,.96*H,.96*L,rgb);bx(.18*W,.25*H,0,.82*W,.78*H,.04*L,C_DRK);break;
+  }
+  M=[];for(const p of parts){const pts=p.pts.map(map);for(const f of hullFaces(pts))M.push({n:f.n,pts:f.pts,c:f.c,rgb:p.c,a:p.a})}
+  MESH.set(key,M);return M}
 function draw3D(){
   const dpr=Math.min(2,window.devicePixelRatio||1),W=view.clientWidth,H=view.clientHeight;if(!W||!H)return;
   if(view.width!==Math.round(W*dpr)||view.height!==Math.round(H*dpr)){view.width=Math.round(W*dpr);view.height=Math.round(H*dpr)}
@@ -1156,15 +1280,15 @@ function resetView(){V.th=.75;V.ph=1.0;V.rad=Math.max(S.W,S.L,S.H)*1.9+4;render3
 
 /* ---------- Analyse ---------- */
 function analyse(){
-  const cnt=Object.create(null),th={f:0,b:0,l:0,r:0,u:0,d:0},shapes=Object.create(null);
-  S.blocks.forEach(v=>{cnt[v.t]=(cnt[v.t]||0)+1;if(v.t==='thruster')th[v.d]++;
+  const cnt=Object.create(null),thBy=Object.create(null),th={f:0,b:0,l:0,r:0,u:0,d:0},shapes=Object.create(null);
+  S.blocks.forEach(v=>{cnt[v.t]=(cnt[v.t]||0)+1;if(TM[v.t].dir){th[v.d]++;const o=thBy[v.t]=thBy[v.t]||{};o[v.d]=(o[v.d]||0)+1}
     if(TM[v.t].hull){const m=shapes[v.t]=shapes[v.t]||{},s=v.s||'cube';m[s]=(m[s]||0)+1}});
   const seen=new Set();let parts=0,biggest=0;
   S.occ.forEach((a,k)=>{if(seen.has(k))return;parts++;let n=0;const st=[k];seen.add(k);
     while(st.length){const c=st.pop();n++;const [x,y,z]=P3(c);
       for(const [dx,dy,dz] of NB){const nk=K(x+dx,y+dy,z+dz);if(S.occ.has(nk)&&!seen.has(nk)){seen.add(nk);st.push(nk)}}}
     biggest=Math.max(biggest,n)});
-  return {cnt,th,shapes,parts,loose:S.occ.size-biggest};
+  return {cnt,th,thBy,shapes,parts,loose:S.occ.size-biggest};
 }
 function updateInfo(){
   const A=analyse(),c=t=>A.cnt[t]||0,cls=S.cls,L=[];
@@ -1178,13 +1302,13 @@ function updateInfo(){
     if(cls==='SV'||cls==='CV'){
       const miss=DORDER.filter(d=>!A.th[d]);
       miss.length?add('err','Keine Schubdüse für: '+miss.map(d=>DIRS[d].n).join(', ')+'. Für volle Steuerung braucht es Schub in alle sechs Richtungen.'):add('ok','Schub in alle sechs Richtungen');
-      c('rcs')?add('ok','RCS für Drehungen vorhanden'):add('warn','Kein RCS – das Schiff dreht sich kaum.');
+      (c('rcs')||c('rcsT2'))?add('ok','RCS für Drehungen vorhanden'):add('warn','Kein RCS – das Schiff dreht sich kaum.');
     }
     if(cls==='HV'){
       c('hover')?add('ok','Schwebetriebwerk vorhanden'):add('err','Kein Schwebetriebwerk – das HV hebt nicht ab.');
       (A.th.f&&A.th.b)?add('ok','Schub vorwärts und rückwärts'):add('warn','Für Fahrt braucht das HV Schubdüsen vorwärts und rückwärts.');
     }
-    if(cls==='BA'&&(c('thruster')||c('rcs')||c('hover')||c('warp'))) add('warn','Basen bewegen sich nicht – Antriebe sind hier überflüssig.');
+    if(cls==='BA'&&(c('thruster')||c('thrusterT2')||c('jet')||c('rcs')||c('hover')||c('warp'))) add('warn','Basen bewegen sich nicht – Antriebe sind hier überflüssig.');
     if(cls==='CV'&&!c('warp')) add('info','Kein Warpantrieb – Reisen in andere Systeme ist so nicht möglich.');
     if((cls==='CV'||cls==='BA')&&!c('o2')) add('info','Kein Sauerstofftank – drinnen gibt es keine Atemluft.');
     if(cls==='SV'&&!c('gear')) add('info','Keine Landebeine eingeplant.');
@@ -1206,7 +1330,7 @@ function updateInfo(){
   }
   $('#checks').innerHTML=L.map(([l,t])=>`<li><span class="dot ${l}"></span><span>${t}</span></li>`).join('');
   let rows='';TYPES.forEach(t=>{const n=c(t.id);if(!n)return;let sub='';
-    if(t.id==='thruster')sub=`<div class="s">${DORDER.filter(d=>A.th[d]).map(d=>DIRS[d].a+' '+A.th[d]).join(' · ')}</div>`;
+    if(t.dir){const o=A.thBy[t.id]||{};sub=`<div class="s">${DORDER.filter(d=>o[d]).map(d=>DIRS[d].a+' '+o[d]).join(' · ')}</div>`}
     if(t.hull){const m=A.shapes[t.id]||{},ks=Object.keys(m);if(ks.length>1||ks[0]!=='cube')sub=`<div class="s">${SHAPES.filter(s=>m[s.id]).map(s=>s.n+' '+m[s.id]).join(' · ')}</div>`}
     rows+=`<tr><td><span class="sw" style="display:inline-grid;vertical-align:-4px;margin-right:6px;background:${t.c};color:${ink(t.c)}">${t.dir?'↑':t.k}</span>${t.n}${sub}</td><td class="n">${n}</td></tr>`});
   $('#bom').innerHTML=rows?rows+`<tr class="tot"><td>Gesamt (Teile)</td><td class="n">${S.blocks.size}</td></tr>`:'<tr><td class="s">Noch keine Blöcke gesetzt.</td></tr>';
@@ -1220,7 +1344,8 @@ function updateInfo(){
 /* ---------- Spielwerte (Vanilla-Blockliste, BlocksConfig.ecf) ----------
    Eintrag: [Größe B×H×L, Masse kg, CPU, Strombedarf kW, Wert]
    Wert: Schub kN (Düse), Drehmoment kNm (RCS), Schwebekraft kN (Schwebetriebwerk), Leistung kW (Generator) */
-const VAL={thruster:['thr','Schub','kN'],rcs:['tq','Drehmoment','kNm'],hover:['lift','Schwebekraft','kN'],generator:['out','Leistung','kW']};
+const VAL={thruster:['thr','Schub','kN'],thrusterT2:['thr','Schub','kN'],jet:['thr','Schub','kN'],rcs:['tq','Drehmoment','kNm'],rcsT2:['tq','Drehmoment','kNm'],
+  hover:['lift','Schwebekraft','kN'],generator:['out','Leistung','kW'],solar:['out','Leistung','kW']};
 const STATS={
   small:{steel:[['1x1x1',8,0,0,0,1]],hsteel:[['1x1x1',32,0,0,0,1]],csteel:[['1x1x1',64,0,0,0,1]],xsteel:[['1x1x1',64,0,0,0,1]],carbon:[['1x1x1',3,0,0,0,1]],window:[['1x1x1',24,0,0,0,1]],
     core:[['1x1x1',140,0,5,0,1]],cockpit:[['1x1x2',845,0,10,0,1],['3x1x3',1390,0,10,0,10]],generator:[['1x1x1',148,87,0,700,1],['1x2x1',262,187,0,1500,3]],
@@ -1258,6 +1383,9 @@ const STATS={
     tMinigun:[['3x1x3',6000,2800,5,0,5]],tCannon:[['3x1x3',5980,8600,5,0,5]],tRocket:[['3x1x3',5777,10500,5,0,10]],tFlak:[['3x1x3',5615,1300,5,0,10]],
     tPulse:[['3x1x3',11760,15100,5,0,15]],tPlasma:[['3x1x3',8490,22300,10,0,15]],tArty:[['5x2x5',19800,22600,5,0,20]],turret:[['3x3x3',6120,2500,5,0,5]],
     repair:[['1x1x1',12600,25000,25000,0,12]],teleporter:[['1x1x1',3200,35000,12000,0,15]]}};
+EXTRA.forEach(e=>{['small','hv','large','ba'].forEach(g=>{if(e[g])STATS[g][e.id]=e[g]})});
+STATS.large.generator.push(['6x2x2',37355,22500,0,180000,15]);STATS.large.fuel.push(['2x2x1',3570,1500,1,0,15]);STATS.large.constructor.push(['1x1x1',1660,10000,300,0,3]);
+STATS.large.solar.push(['1x2x1',2050,50,0,5000,1],['3x1x2',350,20,0,0,1]);STATS.small.gear.push(['2x1x2',240,0,1,0,10]);
 /* CPU-Grenzen je Stufe (Kern = T1, Erweiterungen T2–T4) */
 const CPU_TIER={HV:[5000,12000,30000,70000],SV:[6000,15000,40000,100000],CV:[200000,500000,1500000,10000000],BA:[80000,200000,500000,1300000]};
 const VMAX_DEF={HV:{planet:20,space:20},SV:{planet:60,space:120},CV:{planet:60,space:100},BA:{planet:0,space:0}};
@@ -1296,8 +1424,8 @@ function flyCalc(){
   let m=0,cpu=0,eIn=0,eThr=0,eOut=0,tq=0,lift=0,scaled=0;
   S.blocks.forEach((v,k)=>{const st=devStat(cls,v.t,v);if(!st){miss.add(v.t);return}if(st.scaled)scaled++;
     const [x,y,z]=P3(k),[w,h,l]=dims(v);m+=st.m;cpu+=st.cpu;
-    if(v.t==='thruster'){F[v.d]+=st.val;eThr+=st.e}else eIn+=st.e;
-    if(v.t==='generator')eOut+=st.val;if(v.t==='rcs')tq+=st.val;if(v.t==='hover')lift+=st.val;
+    const vk=VAL[v.t]&&VAL[v.t][0];if(TM[v.t].dir){F[v.d]+=st.val;eThr+=st.e}else eIn+=st.e;
+    if(vk==='out')eOut+=st.val;if(vk==='tq')tq+=st.val;if(vk==='lift')lift+=st.val;
     pts.push([(x+w/2)*bs,(y+h/2)*bs,(z+l/2)*bs,st.m,w*bs,h*bs,l*bs])});
   const c=[0,0,0];if(m>0)pts.forEach(p=>{for(let i=0;i<3;i++)c[i]+=p[i]*p[3]/m});
   let Ix=0,Iy=0;pts.forEach(([x,y,z,mm,w,h,l])=>{const dx=x-c[0],dy=y-c[1],dz=z-c[2];Ix+=mm*(dy*dy+dz*dz+(h*h+l*l)/12);Iy+=mm*(dx*dx+dz*dz+(w*w+l*l)/12)});
@@ -1455,12 +1583,12 @@ function simBuild(){
   const ha=hideAbove;hideAbove=false;let faces=sceneFaces();hideAbove=ha;
   const toL=p=>[(p[0]+wx)*bs-c[0],(p[1]+wy)*bs-c[1],(p[2]+wz)*bs-c[2]];
   let mn=[1e9,1e9,1e9],mx=[-1e9,-1e9,-1e9];S.occ.forEach((a,k)=>{const p=P3(k);for(let i=0;i<3;i++){mn[i]=Math.min(mn[i],p[i]);mx[i]=Math.max(mx[i],p[i]+1)}});
-  if(faces.length>7000)faces=boxFaces(mn[0]-wx,mn[1]-wy,mn[2]-wz,mx[0]-wx,mx[1]-wy,mx[2]-wz).map(f=>({...f,rgb:TM.steel.rgb}));
+  if(faces.length>14000)faces=boxFaces(mn[0]-wx,mn[1]-wy,mn[2]-wz,mx[0]-wx,mx[1]-wy,mx[2]-wz).map(f=>({...f,rgb:TM.steel.rgb}));
   const F=faces.map(f=>{const pts=f.pts.map(toL);return {n:f.n,pts,c:pts.reduce((a,p)=>add3(a,scl(p,1/pts.length)),[0,0,0]),rgb:f.rgb,a:f.a,noz:f.noz}});
   const corners=[];for(const X of [mn[0],mx[0]])for(const Y of [mn[1],mx[1]])for(const Z of [mn[2],mx[2]])corners.push(toL([X-wx,Y-wy,Z-wz]));
   const size=Math.max(2,...[0,1,2].map(i=>(mx[i]-mn[i])*bs));
   /* Düsen für das Flammen-Leuchten */
-  const noz=[];S.blocks.forEach((v,k)=>{if(v.t!=='thruster')return;const [x,y,z]=P3(k),[w,h,l]=dims(v),pv=DIRS[v.d].v;
+  const noz=[];S.blocks.forEach((v,k)=>{if(!TM[v.t].dir)return;const [x,y,z]=P3(k),[w,h,l]=dims(v),pv=DIRS[v.d].v;
     const ctr=[x+w/2,y+h/2,z+l/2],half=[w/2,h/2,l/2];noz.push({d:v.d,p:toL([ctr[0]-pv[0]*half[0]-wx,ctr[1]-pv[1]*half[1]-wy,ctr[2]-pv[2]*half[2]-wz]),r:Math.min(w,h,l)*bs*.45})});
   return {R,F,corners,size,noz}}
 function simReset(){const B=SIM.B,R=B.R,sz=B.size,space=R.g===0;
