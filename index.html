@@ -249,6 +249,24 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
 .ctip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 7px;font-size:.74rem;font-family:var(--f-mono);box-shadow:var(--shadow);white-space:nowrap;z-index:2}
 .fnote{font-size:.74rem;color:var(--muted);margin:0;line-height:1.45}
 
+/* Probeflug */
+.sim{position:fixed;inset:0;z-index:90;background:#05070c;touch-action:none;user-select:none;-webkit-user-select:none}
+#simCv{position:absolute;inset:0;width:100%;height:100%;display:block}
+.simtop{position:absolute;top:calc(8px + env(safe-area-inset-top,0px));right:max(8px,env(safe-area-inset-right,0px));display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:70%}
+.sim button{font:inherit;color:#fff;background:rgba(10,14,20,.55);border:1px solid rgba(255,255,255,.35);border-radius:8px;min-height:40px;padding:0 12px;font-weight:700;font-size:.8rem;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.sim button[aria-pressed="true"]{background:rgba(240,138,46,.85);border-color:#f08a2e;color:#1a0f05}
+.sim button.held{background:rgba(240,138,46,.85);color:#1a0f05}
+.joy{position:absolute;bottom:calc(18px + env(safe-area-inset-bottom,0px));width:132px;height:132px;border-radius:50%;border:2px solid rgba(255,255,255,.35);background:rgba(10,14,20,.28);touch-action:none}
+.joy.l{left:max(18px,env(safe-area-inset-left,0px))} .joy.r{right:max(18px,env(safe-area-inset-right,0px))}
+.joy i{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(255,255,255,.55);pointer-events:none}
+.joy b{position:absolute;left:0;right:0;top:-20px;text-align:center;font-size:.66rem;color:rgba(255,255,255,.8);font-weight:700;letter-spacing:.06em;text-transform:uppercase;pointer-events:none}
+.simbtns{position:absolute;bottom:calc(178px + env(safe-area-inset-bottom,0px));display:flex;gap:6px}
+.simbtns.l{left:max(18px,env(safe-area-inset-left,0px))} .simbtns.r{right:max(18px,env(safe-area-inset-right,0px))}
+.simbtns button{min-width:58px;min-height:46px}
+.simhelp{position:absolute;left:50%;bottom:calc(12px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);margin:0;color:rgba(255,255,255,.75);font-size:.72rem;text-align:center;max-width:46vw;pointer-events:none;text-shadow:0 1px 3px #000}
+@media (pointer:fine){.joy,.simbtns{opacity:.75}}
+@media (pointer:coarse){.simhelp .kb{display:none}}
+
 /* Handy: eine Ansicht nach der anderen (Tabs) */
 @media (max-width:959px){
   .shell[data-view="grid"] .side{display:none}
@@ -359,7 +377,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
       <section class="pane infopane" aria-label="Info">
         <div class="meta" id="meta"></div>
         <div><h2>Flugwerte &amp; Bewertung</h2><div class="ftiles" id="ftiles"></div>
-          <div class="fbtns"><button class="btn primary" id="flyBtn">Flugtest öffnen</button><button class="btn" id="statBtn2">Spielwerte</button></div></div>
+          <div class="fbtns"><button class="btn primary" id="simBtn">✈ Probeflug</button><button class="btn" id="flyBtn">Flugtest</button><button class="btn" id="statBtn2">Spielwerte</button></div></div>
         <div><h2>Prüfliste</h2><ul class="checks" id="checks"></ul></div>
         <div><h2>Stückliste</h2><table class="bom" id="bom"></table></div>
         <p class="hint keys">Tastatur: <kbd>B</kbd> Blöcke · <kbd>Q</kbd>/<kbd>E</kbd> Ebene · <kbd>R</kbd> waagrecht drehen · <kbd>T</kbd> kippen · <kbd>F</kbd> rollen · <kbd>M</kbd> spiegeln · <kbd>Strg</kbd>+<kbd>Z</kbd> rückgängig · Rechtsklick löscht</p>
@@ -495,7 +513,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
     </div>
     <div class="ftiles" id="flyTiles"></div>
     <div><h2>Schub je Richtung</h2><div class="fwrap"><table class="ftab" id="flyDirs"></table></div></div>
-    <div><h2>Testflug</h2><p class="hint" id="flyMis"></p>
+    <div><h2>Testflug</h2><button class="btn primary" id="simBtn2" style="margin-bottom:8px">✈ Selbst fliegen (Probeflug)</button><p class="hint" id="flyMis"></p>
       <div class="chartbox" id="chartBox"><canvas id="flyChart" aria-label="Geschwindigkeit über die Zeit beim Testflug"></canvas><div class="ctip" id="ctip" hidden></div></div>
       <div class="fwrap"><table class="ftab" id="flyPhases"></table></div></div>
     <p class="fnote" id="flyNote"></p>
@@ -541,6 +559,16 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
     </div>
     <button class="btn primary" id="discOk">Verstanden</button>
   </div>
+</div>
+
+<div class="sim" id="sim" hidden role="application" aria-label="Probeflug">
+  <canvas id="simCv"></canvas>
+  <div class="simtop"><button id="simDamp" aria-pressed="true">Dämpfer an</button><button id="simReset">Neustart</button><button id="simCamB">Kamera</button><button id="simClose" aria-label="Probeflug beenden">✕ Ende</button></div>
+  <div class="simbtns l" id="simRoll"><button data-hold="rollL" aria-label="Rollen links">⟲</button><button data-hold="rollR" aria-label="Rollen rechts">⟳</button></div>
+  <div class="simbtns r" id="simVert"><button data-hold="up">▲ Hoch</button><button data-hold="down">▼ Runter</button></div>
+  <div class="joy l" id="joyL"><b>Schub</b><i></i></div>
+  <div class="joy r" id="joyR"><b>Lenken</b><i></i></div>
+  <p class="simhelp"><span class="kb">W/S vor/zurück · A/D seitwärts · Leertaste/C hoch/runter · Pfeile oder Maus ziehen: lenken · Q/E rollen · Z Dämpfer · Esc Ende<br></span>Flieg durch die orangen Ringe!</p>
 </div>
 
 <div id="toast" role="status" aria-live="polite"></div>
@@ -1204,7 +1232,7 @@ function flyCalc(){
   const liftF=cls==='HV'?lift:F.u*eff, liftR=g>0&&m>0?liftF/weight:Infinity;
   const I=(Ix+Iy)/2,alpha=I>0?tq*1000*eff/I:0,t90=alpha>0?2*Math.sqrt((Math.PI/2)/alpha):Infinity;
   const vmax=FLY.vmax[cls+'|'+env]||VMAX_DEF[cls][env]||0;
-  return {cls,tier,autoTier:!FLY.tier2,m,cpu,lim,over,eff,eIn,eThr,eOut,F,a,net,g,weight,liftF,liftR,tq,alpha,t90,vmax,miss,scaled,lift}}
+  return {cls,tier,autoTier:!FLY.tier2,m,cpu,lim,over,eff,eIn,eThr,eOut,F,a,net,g,weight,liftF,liftR,tq,alpha,t90,vmax,miss,scaled,lift,c}}
 /* Strecke D mit Anfahr-Beschleunigung a1, Bremsverzögerung a2 und Höchstgeschwindigkeit v */
 function trip(D,a1,a2,v){if(!(a1>0)||!(a2>0)||!(v>0))return null;
   const dAcc=v*v/(2*a1),dDec=v*v/(2*a2);
@@ -1316,6 +1344,166 @@ function renderStats(){const gk=$('#statGrp').value,tb=$('#statTable'),G=STATS[g
 const openStats=()=>{$('#statGrp').value=S.cls==='HV'?'hv':CLASSES[S.cls].grp;renderStats();$('#statMsg').textContent='';openModal('statModal')};
 $('#statBtn').onclick=openStats;$('#statBtn2').onclick=openStats;$('#statGrp').onchange=renderStats;
 $('#statReset').onclick=()=>{OV=np();saveOV();renderStats();updateInfo();$('#statMsg').textContent='Alle Werte wieder wie in der Blockliste.'};
+
+/* ---------- Probeflug: das Schiff selbst fliegen ----------
+   Lokale Achsen wie im Raster: +x rechts, +y oben, −z vorne (Bug). Werte aus flyCalc (Schub je Richtung, CPU, Schwerkraft, RCS). */
+const SIM={on:false,keys:new Set(),hold:Object.create(null),joyL:[0,0],joyR:[0,0],drag:null,damp:true,cam:0};
+const add3=(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]],scl=(a,s)=>[a[0]*s,a[1]*s,a[2]*s];
+const mtv=(M,v)=>[0,1,2].map(i=>M[0][i]*v[0]+M[1][i]*v[1]+M[2][i]*v[2]);
+function rotM(ax,ang){const [x,y,z]=ax,c=Math.cos(ang),s=Math.sin(ang),t=1-c;
+  return [[t*x*x+c,t*x*y-s*z,t*x*z+s*y],[t*x*y+s*z,t*y*y+c,t*y*z-s*x],[t*x*z-s*y,t*y*z+s*x,t*z*z+c]]}
+function ortho(M){let a=norm([M[0][0],M[1][0],M[2][0]]),b=[M[0][1],M[1][1],M[2][1]];const d=dot(a,b);b=norm([b[0]-a[0]*d,b[1]-a[1]*d,b[2]-a[2]*d]);const c=cross(a,b);
+  return [[a[0],b[0],c[0]],[a[1],b[1],c[1]],[a[2],b[2],c[2]]]}
+function simBuild(){
+  const R=flyCalc(),bs=CLASSES[S.cls].bs,wx=S.W/2,wy=S.H/2,wz=S.L/2,c=R.c;
+  const ha=hideAbove;hideAbove=false;let faces=sceneFaces();hideAbove=ha;
+  const toL=p=>[(p[0]+wx)*bs-c[0],(p[1]+wy)*bs-c[1],(p[2]+wz)*bs-c[2]];
+  let mn=[1e9,1e9,1e9],mx=[-1e9,-1e9,-1e9];S.occ.forEach((a,k)=>{const p=P3(k);for(let i=0;i<3;i++){mn[i]=Math.min(mn[i],p[i]);mx[i]=Math.max(mx[i],p[i]+1)}});
+  if(faces.length>7000)faces=boxFaces(mn[0]-wx,mn[1]-wy,mn[2]-wz,mx[0]-wx,mx[1]-wy,mx[2]-wz).map(f=>({...f,rgb:TM.steel.rgb}));
+  const F=faces.map(f=>{const pts=f.pts.map(toL);return {n:f.n,pts,c:pts.reduce((a,p)=>add3(a,scl(p,1/pts.length)),[0,0,0]),rgb:f.rgb,a:f.a,noz:f.noz}});
+  const corners=[];for(const X of [mn[0],mx[0]])for(const Y of [mn[1],mx[1]])for(const Z of [mn[2],mx[2]])corners.push(toL([X-wx,Y-wy,Z-wz]));
+  const size=Math.max(2,...[0,1,2].map(i=>(mx[i]-mn[i])*bs));
+  /* Düsen für das Flammen-Leuchten */
+  const noz=[];S.blocks.forEach((v,k)=>{if(v.t!=='thruster')return;const [x,y,z]=P3(k),[w,h,l]=dims(v),pv=DIRS[v.d].v;
+    const ctr=[x+w/2,y+h/2,z+l/2],half=[w/2,h/2,l/2];noz.push({d:v.d,p:toL([ctr[0]-pv[0]*half[0]-wx,ctr[1]-pv[1]*half[1]-wy,ctr[2]-pv[2]*half[2]-wz]),r:Math.min(w,h,l)*bs*.45})});
+  return {R,F,corners,size,noz}}
+function simReset(){const B=SIM.B,R=B.R,sz=B.size,space=R.g===0;
+  SIM.M=[[1,0,0],[0,1,0],[0,0,1]];SIM.v=[0,0,0];SIM.w=[0,0,0];SIM.t=0;SIM.run=false;SIM.done=false;SIM.msg='';SIM.msgT=0;SIM.ring=0;
+  const minY=Math.min(...B.corners.map(p=>p[1]));SIM.pos=[0,space?0:-minY+(R.cls==='HV'?1.5:0),0];SIM.camC=null;
+  const sc=Math.max(1,sz/14),rr=Math.max(6,sz*1.1),L=[];
+  const xs=[0,35,-35,45,-25,0],ys=space?[0,25,-30,15,-20,10]:[18,34,50,28,62,22],dz=[90,95,100,95,100,105];let z=0;
+  for(let i=0;i<6;i++){z-=dz[i]*sc;const y=R.cls==='HV'?SIM.pos[1]+rr*.6:(space?ys[i]*sc:ys[i]*sc+rr);L.push({c:[xs[i]*sc*(R.cls==='HV'?.6:1),y,z],r:rr})}
+  L.forEach((g,i)=>{const prev=i?L[i-1].c:SIM.pos;g.n=norm(sub(g.c,prev))});SIM.rings=L;
+  if(R.cls==='HV'&&R.g>0&&R.liftR<1)simMsg('Die Schwebetriebwerke tragen das Gewicht nicht – das HV hebt nicht ab.',99);
+  else if(R.cls!=='HV'&&R.g>0&&R.liftR<1)simMsg('Zu wenig Schub nach oben – das Schiff hebt bei '+nf(R.g/G0,2)+' g nicht ab.',6);
+  else if(!R.tq)simMsg('Kein RCS – das Schiff kann sich nicht drehen.',6);
+  else simMsg('Bereit. Flieg durch die orangen Ringe!',3)}
+function simMsg(t,s){SIM.msg=t;SIM.msgT=s}
+function simOpen(){if(!S.blocks.size){toast('Noch keine Blöcke gesetzt');return}
+  if(S.cls==='BA'){toast('Basen können nicht fliegen');return}
+  ['flyModal'].forEach(id=>{if(!$('#'+id).hidden)closeModal(id)});
+  SIM.B=simBuild();const hv=SIM.B.R.cls==='HV';$('#simRoll').hidden=hv;$('#simVert').hidden=hv;
+  $('#sim').hidden=false;SIM.on=true;simReset();SIM.last=0;SIM.keys.clear();
+  if(!SIM.stars){SIM.stars=[];for(let i=0;i<260;i++){const u=Math.random()*2-1,a=Math.random()*6.283,r=Math.sqrt(1-u*u);SIM.stars.push([r*Math.cos(a),u,r*Math.sin(a),Math.random()])}}
+  requestAnimationFrame(simLoop)}
+function simClose(){SIM.on=false;$('#sim').hidden=true}
+function simInput(){const k=SIM.keys,h=SIM.hold,b=x=>x?1:0,cl=x=>Math.max(-1,Math.min(1,x));
+  return {fwd:cl(b(k.has('KeyW'))-b(k.has('KeyS'))+SIM.joyL[1]),str:cl(b(k.has('KeyD'))-b(k.has('KeyA'))+SIM.joyL[0]),
+    vert:cl(b(k.has('Space'))-b(k.has('KeyC'))+b(h.up)-b(h.down)),
+    pitch:cl(b(k.has('ArrowUp'))-b(k.has('ArrowDown'))+SIM.joyR[1]+(SIM.drag?SIM.drag[1]:0)),
+    yaw:cl(b(k.has('ArrowLeft'))-b(k.has('ArrowRight'))-SIM.joyR[0]-(SIM.drag?SIM.drag[0]:0)),
+    roll:cl(b(k.has('KeyQ'))-b(k.has('KeyE'))+b(h.rollL)-b(h.rollR))}}
+function simStep(dt){const B=SIM.B,R=B.R,A=R.a,g=R.g,hv=R.cls==='HV',I=simInput();let M=SIM.M,v=SIM.v;
+  const moving=Math.abs(I.fwd)+Math.abs(I.str)+Math.abs(I.vert)+Math.abs(I.pitch)+Math.abs(I.yaw)+Math.abs(I.roll)>.05;
+  if(moving&&!SIM.run&&!SIM.done)SIM.run=true;if(SIM.run)SIM.t+=dt;
+  /* Drehung */
+  const al=R.alpha,wmax=Math.min(1.3,al*1.6),inp=[I.pitch,hv?I.yaw:I.yaw,hv?0:I.roll];
+  if(hv)inp[0]=0;
+  for(let i=0;i<3;i++){const w=SIM.w[i];if(Math.abs(inp[i])>.05)SIM.w[i]=Math.max(-wmax,Math.min(wmax,w+inp[i]*al*dt*2));
+    else{const d=al*dt*2;SIM.w[i]=Math.abs(w)<=d?0:w-Math.sign(w)*d}}
+  const wl=Math.hypot(...SIM.w);if(wl>1e-6){M=ortho(mul(M,rotM(scl(SIM.w,1/wl),wl*dt)))}
+  /* Schub im Schiffs-System, Dämpfer bremst nicht gesteuerte Achsen und hält gegen die Schwerkraft */
+  const gw=[0,-g,0],gl=mtv(M,gw),vl=mtv(M,v),pos=['r','u','b'],neg=['l','d','f'],ins=[I.str,I.vert,-I.fwd],acc=[0,0,0];SIM.act=new Set();
+  const liftOK=!(R.g>0&&R.liftR<1);
+  for(let k=0;k<3;k++){if(hv&&k===1)continue;const i=ins[k];let a=0;
+    if(Math.abs(i)>.05)a=i>0?i*A[pos[k]]:i*A[neg[k]];
+    else if(SIM.damp){const need=-vl[k]/.35-gl[k];a=Math.max(-A[neg[k]],Math.min(A[pos[k]],need))}
+    if(hv&&!liftOK)a=0;acc[k]=a;const lim=Math.max(A[pos[k]],A[neg[k]])*.08;if(a>lim)SIM.act.add(pos[k]);else if(a<-lim)SIM.act.add(neg[k])}
+  let aw=mv(M,acc);if(!hv)aw=add3(aw,gw);else aw[1]=0;
+  v=add3(v,scl(aw,dt));const sp=Math.hypot(...v);if(R.vmax>0&&sp>R.vmax)v=scl(v,R.vmax/sp);
+  let p=add3(SIM.pos,scl(v,dt));
+  if(g>0){const minY=Math.min(...B.corners.map(c=>mv(M,c)[1]));
+    if(hv){p[1]=-minY+(liftOK?1.5:0);v[1]=0}
+    else if(p[1]+minY<0){if(v[1]<-9&&!SIM.crash){simMsg('Harte Landung mit '+nf(-v[1],0)+' m/s!',2.5)}p[1]=-minY;if(v[1]<0)v[1]=0;const f=Math.pow(.2,dt);v[0]*=f;v[2]*=f}}
+  /* Ringe */
+  const rg=SIM.rings[SIM.ring];if(rg&&!SIM.done){const s0=dot(sub(SIM.pos,rg.c),rg.n),s1=dot(sub(p,rg.c),rg.n);
+    if(s0<0&&s1>=0){const q=sub(p,rg.c),off=sub(q,scl(rg.n,s1));if(Math.hypot(...off)<=rg.r){SIM.ring++;
+      if(SIM.ring>=SIM.rings.length){SIM.done=true;SIM.run=false;const key=(S.name||'Unbenannt')+'|'+S.cls+'|'+(g>0?'p':'s');FLY.best=FLY.best||{};
+        const best=FLY.best[key],nb=!best||SIM.t<best;if(nb){FLY.best[key]=SIM.t;saveFly()}
+        simMsg('Ziel! '+nf(SIM.t,1)+' s'+(nb?(best?' – neue Bestzeit!':' – Bestzeit gespeichert'):' (Bestzeit '+nf(best,1)+' s)'),6)}
+      else simMsg('Ring '+SIM.ring+' / '+SIM.rings.length,1.2)}}}
+  SIM.M=M;SIM.v=v;SIM.pos=p;if(SIM.msgT>0&&SIM.msgT<90)SIM.msgT-=dt}
+function clipProj(cam,W,H,pts,closed){const near=.3,cs=pts.map(p=>{const d=sub(p,cam.C);return [dot(d,cam.r),dot(d,cam.u),dot(d,cam.f)]}),out=[];
+  const n=cs.length,lim=closed?n:n-1;const pr=q=>[W/2+q[0]/q[2]*cam.F,H/2-q[1]/q[2]*cam.F];
+  if(!closed){const segs=[];for(let i=0;i<lim;i++){let a=cs[i],b=cs[i+1];if(a[2]<near&&b[2]<near)continue;
+      if(a[2]<near){const t=(near-a[2])/(b[2]-a[2]);a=a.map((x,j)=>x+(b[j]-x)*t)}if(b[2]<near){const t=(near-b[2])/(a[2]-b[2]);b=b.map((x,j)=>x+(a[j]-x)*t)}
+      segs.push([pr(a),pr(b)])}return segs}
+  for(let i=0;i<n;i++){const a=cs[i],b=cs[(i+1)%n],ia=a[2]>=near,ib=b[2]>=near;if(ia)out.push(a);
+    if(ia!==ib){const t=(near-a[2])/(b[2]-a[2]);out.push(a.map((x,j)=>x+(b[j]-x)*t))}}
+  return out.map(pr)}
+function simDraw(){const cv=$('#simCv'),dpr=Math.min(2,window.devicePixelRatio||1),W=cv.clientWidth,H=cv.clientHeight;if(!W||!H)return;
+  if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr)}
+  const x=cv.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);const B=SIM.B,R=B.R,M=SIM.M,P0=SIM.pos,space=R.g===0,D=B.size;
+  /* Kamera folgt dem Schiff */
+  const far=SIM.cam?1.9:1.15,want=add3(P0,mv(M,[0,.38*D*far+1,1.05*D*far+3]));
+  SIM.camC=SIM.camC?add3(SIM.camC,scl(sub(want,SIM.camC),Math.min(1,SIM.dt*7))):want;
+  const C=SIM.camC,tgt=add3(P0,mv(M,[0,.12*D,-.6*D])),f=norm(sub(tgt,C)),upH=mv(M,[0,1,0]),r=norm(cross(f,upH)),u=cross(r,f);
+  const cam={C,f,r,u,F:(Math.min(W,H*1.25)/2)/Math.tan(32*Math.PI/180)};
+  if(space){x.fillStyle='#04060b';x.fillRect(0,0,W,H);for(const s of SIM.stars){const d=[s[0],s[1],s[2]],z=dot(d,f);if(z<=.05)continue;
+      const sx=W/2+dot(d,r)/z*cam.F,sy=H/2-dot(d,u)/z*cam.F;if(sx<0||sy<0||sx>W||sy>H)continue;x.fillStyle=`rgba(255,255,255,${.35+s[3]*.6})`;x.fillRect(sx,sy,s[3]>.85?2:1.2,s[3]>.85?2:1.2)}}
+  else{const gr=x.createLinearGradient(0,0,0,H);gr.addColorStop(0,'#3d6fa6');gr.addColorStop(1,'#bcd5e6');x.fillStyle=gr;x.fillRect(0,0,W,H);
+    const Lg=6000,gp=clipProj(cam,W,H,[[P0[0]-Lg,0,P0[2]-Lg],[P0[0]+Lg,0,P0[2]-Lg],[P0[0]+Lg,0,P0[2]+Lg],[P0[0]-Lg,0,P0[2]+Lg]],true);
+    if(gp.length>2){x.fillStyle='#6f7d52';poly(x,gp);x.fill()}
+    const st=D>30?50:20,ext=st*22,ox=Math.round(P0[0]/st)*st,oz=Math.round(P0[2]/st)*st;x.strokeStyle='rgba(255,255,255,.16)';x.lineWidth=1;x.beginPath();
+    for(let i=-22;i<=22;i++){for(const seg of clipProj(cam,W,H,[[ox+i*st,0,oz-ext],[ox+i*st,0,oz+ext]],false)){x.moveTo(...seg[0]);x.lineTo(...seg[1])}
+      for(const seg of clipProj(cam,W,H,[[ox-ext,0,oz+i*st],[ox+ext,0,oz+i*st]],false)){x.moveTo(...seg[0]);x.lineTo(...seg[1])}}x.stroke();
+    /* Schatten als Höhenhilfe */
+    const sh=hull2D(B.corners.map(c=>{const w=add3(P0,mv(M,c));return [w[0],w[2]]})).map(q=>[q[0],.02,q[1]]),sp=clipProj(cam,W,H,sh,true);
+    const hgt=Math.max(0,P0[1]+Math.min(...B.corners.map(c=>mv(M,c)[1])));if(sp.length>2){x.fillStyle=`rgba(0,0,0,${Math.max(.08,.35-hgt/400)})`;poly(x,sp);x.fill()}}
+  /* Ringe: hinter dem Schiff zuerst */
+  const ringPts=g=>{const a=norm(Math.abs(g.n[1])<.9?cross(g.n,[0,1,0]):cross(g.n,[1,0,0])),b=cross(g.n,a),o=[];for(let i=0;i<40;i++){const t=i/40*6.2832;o.push(add3(g.c,add3(scl(a,Math.cos(t)*g.r),scl(b,Math.sin(t)*g.r))))}return o};
+  const drawRing=(g,i)=>{const pts=ringPts(g),segs=[];for(let j=0;j<40;j++)segs.push(...clipProj(cam,W,H,[pts[j],pts[(j+1)%40]],false));
+    const nxt=i===SIM.ring;x.strokeStyle=nxt?'#f08a2e':'rgba(255,255,255,.45)';x.lineWidth=nxt?4:2;x.beginPath();segs.forEach(s=>{x.moveTo(...s[0]);x.lineTo(...s[1])});x.stroke()};
+  const dShip=dot(sub(P0,C),f),rs=SIM.rings.map((g,i)=>({g,i,d:dot(sub(g.c,C),f)})).filter(o=>o.i>=SIM.ring);
+  rs.filter(o=>o.d>=dShip).sort((a,b)=>b.d-a.d).forEach(o=>drawRing(o.g,o.i));
+  /* Schiff */
+  const wf=B.F.map(q=>({n:mv(M,q.n),pts:q.pts.map(p=>add3(P0,mv(M,p))),c:add3(P0,mv(M,q.c)),rgb:q.rgb,a:q.a,noz:q.noz}));
+  renderFaces(x,wf,cam,W,H,.5);
+  const Pj=projector(cam,W,H);x.globalCompositeOperation='lighter';
+  for(const n of B.noz){if(!SIM.act||!SIM.act.has(n.d))continue;const w=add3(P0,mv(M,n.p)),pv=mv(M,DIRS[n.d].v);if(dot(pv,sub(C,w))>0)continue;
+    const q=Pj(w);if(!q)continue;const z=dot(sub(w,C),f),rad=Math.max(3,n.r/z*cam.F*1.4);const gg=x.createRadialGradient(q[0],q[1],0,q[0],q[1],rad);
+    gg.addColorStop(0,'rgba(255,240,200,.95)');gg.addColorStop(.4,'rgba(255,150,40,.7)');gg.addColorStop(1,'rgba(255,90,0,0)');x.fillStyle=gg;x.beginPath();x.arc(q[0],q[1],rad,0,6.3);x.fill()}
+  x.globalCompositeOperation='source-over';
+  rs.filter(o=>o.d<dShip).sort((a,b)=>b.d-a.d).forEach(o=>drawRing(o.g,o.i));
+  /* Pfeil zum nächsten Ring */
+  const nr=SIM.rings[SIM.ring];if(nr){const q=Pj(nr.c);const off=!q||q[0]<0||q[0]>W||q[1]<0||q[1]>H;
+    if(off){const d=sub(nr.c,C),ang=Math.atan2(-dot(d,u),dot(d,r)),cx=W/2+Math.cos(ang)*Math.min(W,H)*.32,cy=H/2+Math.sin(ang)*Math.min(W,H)*.32;
+      x.save();x.translate(cx,cy);x.rotate(ang);x.fillStyle='#f08a2e';x.beginPath();x.moveTo(14,0);x.lineTo(-8,-9);x.lineTo(-8,9);x.closePath();x.fill();x.restore()}}
+  /* Anzeigen */
+  const vl=mtv(M,SIM.v),sp=Math.hypot(...SIM.v),alt=space?null:Math.max(0,P0[1]+Math.min(...B.corners.map(c=>mv(M,c)[1])));
+  const lines=[`${nf(sp,0)} m/s`+(R.vmax?` / ${nf(R.vmax,0)}`:''),space?'Weltraum':`Höhe ${nf(alt,0)} m · Steig ${nf(SIM.v[1],1)} m/s`,
+    `${R.cls} · ${fmtMass(R.m)} · ${space?'0 g':nf(R.g/G0,2)+' g'}`+(R.eff<1?` · Schub ${nf(R.eff*100,0)} %`:'')];
+  x.font='700 15px '+getComputedStyle(document.documentElement).getPropertyValue('--f-mono');x.textAlign='left';x.fillStyle='#fff';x.shadowColor='rgba(0,0,0,.8)';x.shadowBlur=4;
+  const top=12+(parseInt(getComputedStyle(document.documentElement).getPropertyValue('padding-top'))||0)+(W<600?($('.simtop').offsetHeight+6):0);
+  lines.forEach((t,i)=>{x.font=(i?'600 12px ':'700 18px ')+'system-ui,sans-serif';x.fillText(t,12,top+18+i*18+(i?4:0))});
+  x.font='700 16px system-ui,sans-serif';x.textAlign='center';
+  x.fillText(SIM.done?`Ziel · ${nf(SIM.t,1)} s`:`Ring ${Math.min(SIM.ring+1,SIM.rings.length)} / ${SIM.rings.length} · ${nf(SIM.t,1)} s`,W/2,top+76);
+  if(SIM.msgT>0){x.font='700 17px system-ui,sans-serif';x.fillStyle='#ffd7ad';const words=SIM.msg;x.fillText(words,W/2,H*.32)}
+  x.shadowBlur=0}
+function simLoop(t){if(!SIM.on)return;const dt=SIM.last?Math.min(.05,(t-SIM.last)/1000):0;SIM.last=t;SIM.dt=dt;
+  let n=Math.max(1,Math.ceil(dt/.0167));for(let i=0;i<n;i++)simStep(dt/n);simDraw();requestAnimationFrame(simLoop)}
+/* Bedienung */
+function joy(el,store){let id=null;const kn=el.querySelector('i'),set=(e)=>{const r=el.getBoundingClientRect(),R0=r.width/2;let dx=e.clientX-r.left-R0,dy=e.clientY-r.top-R0;
+    const l=Math.hypot(dx,dy),mx=R0*.75;if(l>mx){dx*=mx/l;dy*=mx/l}kn.style.transform=`translate(${dx}px,${dy}px)`;
+    const dz=v=>Math.abs(v)<.12?0:v;SIM[store]=[dz(dx/mx),dz(-dy/mx)]};
+  el.addEventListener('pointerdown',e=>{id=e.pointerId;try{el.setPointerCapture(id)}catch(_){}set(e);e.preventDefault()});
+  el.addEventListener('pointermove',e=>{if(e.pointerId===id)set(e)});
+  const end=e=>{if(e.pointerId!==id)return;id=null;kn.style.transform='';SIM[store]=[0,0]};el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end)}
+joy($('#joyL'),'joyL');joy($('#joyR'),'joyR');
+document.querySelectorAll('[data-hold]').forEach(b=>{const k=b.dataset.hold,on=e=>{SIM.hold[k]=1;b.classList.add('held');try{b.setPointerCapture(e.pointerId)}catch(_){}e.preventDefault()},
+  off=()=>{SIM.hold[k]=0;b.classList.remove('held')};b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);b.addEventListener('lostpointercapture',off)});
+(function(){const cv=$('#simCv');let st=null;cv.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse')return;st=[e.clientX,e.clientY];try{cv.setPointerCapture(e.pointerId)}catch(_){}});
+  cv.addEventListener('pointermove',e=>{if(!st)return;SIM.drag=[Math.max(-1,Math.min(1,(e.clientX-st[0])/120)),Math.max(-1,Math.min(1,-(e.clientY-st[1])/120))]});
+  const end=()=>{st=null;SIM.drag=null};cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end)})();
+const SIMKEYS=new Set(['KeyW','KeyA','KeyS','KeyD','KeyQ','KeyE','KeyC','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight']);
+window.addEventListener('keydown',e=>{if(!SIM.on)return;e.stopImmediatePropagation();
+  if(e.code==='Escape'){simClose();return}if(e.code==='KeyZ'){$('#simDamp').click();return}if(e.code==='KeyR'){simReset();return}
+  if(SIMKEYS.has(e.code)){SIM.keys.add(e.code);e.preventDefault()}},true);
+window.addEventListener('keyup',e=>{if(!SIM.on)return;e.stopImmediatePropagation();SIM.keys.delete(e.code);if(SIMKEYS.has(e.code))e.preventDefault()},true);
+window.addEventListener('blur',()=>{SIM.keys.clear()});
+$('#simDamp').onclick=()=>{SIM.damp=!SIM.damp;$('#simDamp').setAttribute('aria-pressed',SIM.damp);$('#simDamp').textContent=SIM.damp?'Dämpfer an':'Dämpfer aus';simMsg(SIM.damp?'Trägheitsdämpfer an – das Schiff bremst selbst':'Trägheitsdämpfer aus – das Schiff treibt weiter',2)};
+$('#simReset').onclick=simReset;$('#simClose').onclick=simClose;$('#simCamB').onclick=()=>{SIM.cam=SIM.cam?0:1};
+$('#simBtn').onclick=simOpen;$('#simBtn2').onclick=simOpen;
 
 /* ---------- Bestehenden Block ändern ---------- */
 const HULLS=TYPES.filter(t=>t.hull);
