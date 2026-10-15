@@ -512,6 +512,10 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
       <div class="inl"><label for="flyV">Höchstgeschwindigkeit</label><input type="number" id="flyV" min="1" max="1000" step="1" style="width:5em"> m/s</div>
     </div>
     <div class="ftiles" id="flyTiles"></div>
+    <div><h2>Zuladung</h2>
+      <div class="inl" style="margin-bottom:8px"><label for="flyLoad">Mit Ladung testen</label><input type="number" id="flyLoad" min="0" step="0.1" value="0" style="width:6em"> t
+        <button class="btn" id="flyLoadMax">Max. sicher laden</button><button class="btn" id="flyLoad0">Leer</button></div>
+      <div class="fwrap"><table class="ftab" id="flyPay"></table></div><p class="hint" id="flyPayNote" style="margin-top:6px"></p></div>
     <div><h2>Schub je Richtung</h2><div class="fwrap"><table class="ftab" id="flyDirs"></table></div></div>
     <div><h2>Testflug</h2><button class="btn primary" id="simBtn2" style="margin-bottom:8px">✈ Selbst fliegen (Probeflug)</button><p class="hint" id="flyMis"></p>
       <div class="chartbox" id="chartBox"><canvas id="flyChart" aria-label="Geschwindigkeit über die Zeit beim Testflug"></canvas><div class="ctip" id="ctip" hidden></div></div>
@@ -1224,6 +1228,8 @@ function flyCalc(){
     pts.push([(x+w/2)*bs,(y+h/2)*bs,(z+l/2)*bs,st.m,w*bs,h*bs,l*bs])});
   const c=[0,0,0];if(m>0)pts.forEach(p=>{for(let i=0;i<3;i++)c[i]+=p[i]*p[3]/m});
   let Ix=0,Iy=0;pts.forEach(([x,y,z,mm,w,h,l])=>{const dx=x-c[0],dy=y-c[1],dz=z-c[2];Ix+=mm*(dy*dy+dz*dz+(h*h+l*l)/12);Iy+=mm*(dx*dx+dz*dz+(w*w+l*l)/12)});
+  const m0=m,load=Math.max(0,+FLY.load||0);m=m0+load;if(m0>0){Ix*=m/m0;Iy*=m/m0}
+  let cargo=0;S.blocks.forEach(v=>{if(v.t==='cargo')cargo++});
   const env=cls==='HV'?'planet':FLY.env,g=env==='space'?0:Math.max(0,+FLY.g||0)*G0;
   const TI=tierInfo(),tier=FLY.tier2||TI.tier,lim=CPU_TIER[cls][tier-1],over=cpu/lim-1,eff=FLY.cpu&&over>0?Math.max(.5,1-.5*over):1;
   const a={};DORDER.forEach(d=>a[d]=m>0?F[d]*1000*eff/m:0);
@@ -1232,7 +1238,9 @@ function flyCalc(){
   const liftF=cls==='HV'?lift:F.u*eff, liftR=g>0&&m>0?liftF/weight:Infinity;
   const I=(Ix+Iy)/2,alpha=I>0?tq*1000*eff/I:0,t90=alpha>0?2*Math.sqrt((Math.PI/2)/alpha):Infinity;
   const vmax=FLY.vmax[cls+'|'+env]||VMAX_DEF[cls][env]||0;
-  return {cls,tier,autoTier:!FLY.tier2,m,cpu,lim,over,eff,eIn,eThr,eOut,F,a,net,g,weight,liftF,liftR,tq,alpha,t90,vmax,miss,scaled,lift,c}}
+  /* Zuladung: was der Hub (bzw. die Schwebekraft) zusätzlich zur Leermasse tragen kann; „sicher“ mit 25 % Reserve zum Steigen */
+  const payAt=(gg,res)=>gg>0?liftF*1000/(gg*res)-m0:Infinity,pay=payAt(g,1),paySafe=payAt(g,1.25);
+  return {cls,tier,autoTier:!FLY.tier2,m,cpu,lim,over,eff,eIn,eThr,eOut,F,a,net,g,weight,liftF,liftR,tq,alpha,t90,vmax,miss,scaled,lift,c,m0,load,pay,paySafe,payAt,cargo}}
 /* Strecke D mit Anfahr-Beschleunigung a1, Bremsverzögerung a2 und Höchstgeschwindigkeit v */
 function trip(D,a1,a2,v){if(!(a1>0)||!(a2>0)||!(v>0))return null;
   const dAcc=v*v/(2*a1),dDec=v*v/(2*a2);
@@ -1261,7 +1269,10 @@ function rate(R){const out={},cv=R.cls==='CV'?.25:1,mob=(R.cls==='HV'?['f','b','
   return out}
 function tilesHTML(R,Q){const t=(k,v,[l,txt])=>`<div class="ftile"><span class="k">${k}</span><span class="v">${v}</span><span class="r"><span class="dot ${l}"></span>${txt}</span></div>`;
   const liftTxt=R.cls==='BA'?'–':R.g===0?'–':nf(R.liftR,2)+' : 1';
-  return t('Masse',fmtMass(R.m),['info',R.scaled?'teils hochgerechnet':'aus Blockliste'])+
+  const payT=R.cls==='BA'?['info','–']:R.g===0?['info','Weltraum: kein Hub nötig']:R.pay<0?['err','hebt leer nicht ab']:
+    R.paySafe<0?['warn','keine sichere Reserve']:['ok','sicher bis '+fmtMass(R.paySafe)];
+  return t('Masse',fmtMass(R.m0)+(R.load?' + '+fmtMass(R.load):''),['info',R.load?'mit Ladung':R.scaled?'teils hochgerechnet':'leer, aus Blockliste'])+
+    t('Max. Zuladung',R.cls==='BA'?'–':R.g===0?'∞':fmtMass(Math.max(0,R.pay)),payT)+
     t('Beweglichkeit',nf(Q.mobV*G0,1)+' m/s²',Q.mob)+
     t(R.cls==='HV'?'Schwebekraft':'Hubkraft',liftTxt,Q.lift)+
     t('CPU · T'+R.tier+(R.autoTier?'':' (fest)'),nf(R.cpu,0)+' / '+nf(R.lim,0),Q.cpu)+
@@ -1281,6 +1292,14 @@ function syncFlyCtl(){const cls=S.cls;
 function renderFly(){const R=flyCalc(),Q=rate(R),cls=R.cls;syncFlyCtl();
   $('#flyTitle').textContent='Flugtest · '+(S.name||'Unbenannt')+' ('+cls+')';
   $('#flyTiles').innerHTML=tilesHTML(R,Q);
+  $('#flyLoad').value=+((R.load||0)/1000).toFixed(2);$('#flyLoadMax').disabled=!(R.g>0&&R.paySafe>0)||cls==='BA';
+  if(cls==='BA'){$('#flyPay').innerHTML='';$('#flyPayNote').textContent='Basen tragen keine Zuladung im Flug.'}
+  else{const gs=[...new Set([.4,.7,1,1.5,2,R.g>0?+(R.g/G0).toFixed(2):null].filter(x=>x))].sort((a,b)=>a-b),cur=R.g/G0;
+    $('#flyPay').innerHTML='<tr><th>Schwerkraft</th><th>Max. Zuladung</th><th>Sicher (25 % Reserve)</th></tr>'+gs.map(gg=>{const mx=R.payAt(gg*G0,1),sf=R.payAt(gg*G0,1.25),here=R.g>0&&Math.abs(gg-cur)<.005;
+      const f=v=>v<0?'<span style="color:var(--err)">hebt nicht ab</span>':fmtMass(v);
+      return `<tr${here?' style="font-weight:700"':''}><td>${nf(gg,2)} g${here?' ◂':''}</td><td>${f(mx)}</td><td>${f(sf)}</td></tr>`}).join('');
+    const box=R.cargo?` Laderaum: ${R.cargo} Frachtbox${R.cargo>1?'en':''} à 125 L = ${nf(R.cargo*125,0)} L.`:' Keine Frachtboxen verbaut.';
+    $('#flyPayNote').textContent=(cls==='HV'?'Grundlage ist die Schwebekraft der Schwebetriebwerke.':'Grundlage ist der Schub nach oben'+(R.eff<1?' (mit CPU-Abzug)':'')+'.')+' Zuladung = alles, was zur Leermasse dazukommt: Fracht, Treibstoff, Munition, Spieler.'+box+(R.g===0?' Im Weltraum ist die Zuladung nicht begrenzt, mit Ladung sinkt nur die Beschleunigung.':'')}
   const dirs=cls==='HV'?['f','b','l','r']:DORDER;
   $('#flyDirs').innerHTML='<tr><th>Richtung</th><th>Schub kN</th><th>Beschl. m/s²</th><th>in g</th><th>0 → max</th><th>Bremsweg</th></tr>'+dirs.map(d=>{
     const a=R.net[d],opp={f:'b',b:'f',l:'r',r:'l',u:'d',d:'u'}[d],br=R.net[opp];const bad=a<=0?' class="bad"':'';
@@ -1310,7 +1329,7 @@ function drawFlyChart(){const cv=$('#flyChart'),box=$('#chartBox'),dpr=window.de
   for(let v=0;v<=vm+1e-6;v+=step){x.beginPath();x.moveTo(L,Y(v)+.5);x.lineTo(W-Rr,Y(v)+.5);x.stroke();x.textAlign='right';x.fillText(v,L-6,Y(v)+4)}
   x.textAlign='left';x.fillText('m/s',4,11);
   let t0=0;x.textAlign='center';P.forEach((p,i)=>{if(i){x.setLineDash([3,3]);x.beginPath();x.moveTo(X(t0)+.5,T);x.lineTo(X(t0)+.5,T+ph);x.stroke();x.setLineDash([])}
-    x.fillText(p.n.replace(/ \d+ m$/,''),X(t0+p.p.t/2),H-8);t0+=p.p.t});
+    x.fillText(p.n.replace(/( auf)? \d+ m$/,''),X(t0+p.p.t/2),H-8);t0+=p.p.t});
   x.textAlign='right';x.fillText(nf(tot,1)+' s',W-Rr,11);
   x.strokeStyle=col('--accent');x.lineWidth=2;x.lineJoin='round';x.beginPath();t0=0;
   P.forEach(p=>{const q=p.p;[[0,0],[q.t1,q.vp],[q.t2,q.vp],[q.t,0]].forEach(([tt,v],j)=>{const px=X(t0+tt),py=Y(v);(j===0&&t0===0)?x.moveTo(px,py):x.lineTo(px,py)});t0+=q.t});x.stroke();
@@ -1328,6 +1347,9 @@ document.querySelectorAll('[data-env]').forEach(b=>b.onclick=()=>{FLY.env=b.data
 document.querySelectorAll('[data-tier]').forEach(b=>b.onclick=()=>{FLY.tier2=+b.dataset.tier;saveFly();renderFly();renderFlyTiles()});
 document.querySelectorAll('[data-gp]').forEach(b=>b.onclick=()=>{FLY.g=+b.dataset.gp;saveFly();renderFly();renderFlyTiles()});
 $('#flyG').onchange=()=>{const v=parseFloat(String($('#flyG').value).replace(',','.'));FLY.g=isFinite(v)?Math.max(0,Math.min(5,v)):1;saveFly();renderFly();renderFlyTiles()};
+const setLoad=kg=>{FLY.load=Math.max(0,Math.round(kg));saveFly();renderFly();renderFlyTiles()};
+$('#flyLoad').onchange=()=>{const v=parseFloat(String($('#flyLoad').value).replace(',','.'));setLoad(isFinite(v)?v*1000:0)};
+$('#flyLoadMax').onclick=()=>{const R=flyCalc();if(R.paySafe>0)setLoad(R.paySafe)};$('#flyLoad0').onclick=()=>setLoad(0);
 $('#flyCpu').onchange=()=>{FLY.cpu=$('#flyCpu').checked;saveFly();renderFly();renderFlyTiles()};
 $('#flyV').onchange=()=>{const v=+$('#flyV').value,k=S.cls+'|'+FLY.env;if(v>0&&v!==VMAX_DEF[S.cls][FLY.env])FLY.vmax[k]=Math.min(1000,v);else delete FLY.vmax[k];saveFly();renderFly();renderFlyTiles()};
 
@@ -1472,7 +1494,7 @@ function simDraw(){const cv=$('#simCv'),dpr=Math.min(2,window.devicePixelRatio||
   /* Anzeigen */
   const vl=mtv(M,SIM.v),sp=Math.hypot(...SIM.v),alt=space?null:Math.max(0,P0[1]+Math.min(...B.corners.map(c=>mv(M,c)[1])));
   const lines=[`${nf(sp,0)} m/s`+(R.vmax?` / ${nf(R.vmax,0)}`:''),space?'Weltraum':`Höhe ${nf(alt,0)} m · Steig ${nf(SIM.v[1],1)} m/s`,
-    `${R.cls} · ${fmtMass(R.m)} · ${space?'0 g':nf(R.g/G0,2)+' g'}`+(R.eff<1?` · Schub ${nf(R.eff*100,0)} %`:'')];
+    `${R.cls} · ${fmtMass(R.m)}${R.load?' (mit Ladung)':''} · ${space?'0 g':nf(R.g/G0,2)+' g'}`+(R.eff<1?` · Schub ${nf(R.eff*100,0)} %`:'')];
   x.font='700 15px '+getComputedStyle(document.documentElement).getPropertyValue('--f-mono');x.textAlign='left';x.fillStyle='#fff';x.shadowColor='rgba(0,0,0,.8)';x.shadowBlur=4;
   const top=12+(parseInt(getComputedStyle(document.documentElement).getPropertyValue('padding-top'))||0)+(W<600?($('.simtop').offsetHeight+6):0);
   lines.forEach((t,i)=>{x.font=(i?'600 12px ':'700 18px ')+'system-ui,sans-serif';x.fillText(t,12,top+18+i*18+(i?4:0))});
