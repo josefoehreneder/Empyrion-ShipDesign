@@ -234,7 +234,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
 .fbtns{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
 .fctl{display:grid;gap:10px}
 .fctl .seg3.s2{grid-template-columns:repeat(2,1fr)}
-.fctl .seg3.s4{grid-template-columns:repeat(4,1fr)}
+.fctl .seg3.s5{grid-template-columns:1.6fr repeat(4,1fr)}
 .fctl .inl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
 .ftab{width:100%;border-collapse:collapse;font-size:.82rem}
 .ftab th,.ftab td{padding:5px 4px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
@@ -489,7 +489,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
       <div class="fld"><span>Umgebung</span><div class="seg3 s2" role="group" aria-label="Umgebung"><button data-env="planet" aria-pressed="true">Planet</button><button data-env="space" aria-pressed="false">Weltraum</button></div></div>
       <div class="inl" id="gRow"><label for="flyG">Schwerkraft</label><input type="number" id="flyG" min="0" max="5" step="0.05" value="1" style="width:5em"> g
         <button class="btn" data-gp="0.4">Mond 0,4</button><button class="btn" data-gp="1">1,0</button><button class="btn" data-gp="1.5">1,5</button></div>
-      <div class="fld"><span>CPU-Stufe (Tier)</span><div class="seg3 s4" role="group" aria-label="CPU-Stufe"><button data-tier="1">T1</button><button data-tier="2">T2</button><button data-tier="3">T3</button><button data-tier="4">T4</button></div></div>
+      <div class="fld"><span>CPU-Stufe (Tier) – Auto zählt die eingebauten Erweiterungen</span><div class="seg3 s5" role="group" aria-label="CPU-Stufe"><button data-tier="0">Auto</button><button data-tier="1">T1</button><button data-tier="2">T2</button><button data-tier="3">T3</button><button data-tier="4">T4</button></div></div>
       <div class="inl"><label class="chk"><input type="checkbox" id="flyCpu" checked> CPU-Grenze anwenden</label></div>
       <div class="inl"><label for="flyV">Höchstgeschwindigkeit</label><input type="number" id="flyV" min="1" max="1000" step="1" style="width:5em"> m/s</div>
     </div>
@@ -566,6 +566,9 @@ const TYPES=[
   {id:'fuel',n:'Treibstoff- / Pentaxidtank',g:'Steuerung & Energie',c:'#c98a2d',k:'T'},
   {id:'o2',n:'Sauerstofftank',g:'Steuerung & Energie',c:'#58b4a7',k:'O'},
   {id:'solar',n:'Solarpaneel',g:'Steuerung & Energie',c:'#2f5d8a',k:'So'},
+  {id:'cpu2',n:'CPU-Erweiterung T2',g:'Steuerung & Energie',c:'#5aa6a0',k:'T2'},
+  {id:'cpu3',n:'CPU-Erweiterung T3',g:'Steuerung & Energie',c:'#3b8a9e',k:'T3'},
+  {id:'cpu4',n:'CPU-Erweiterung T4',g:'Steuerung & Energie',c:'#2c6688',k:'T4'},
   {id:'thruster',n:'Schubdüse',g:'Antrieb',c:'#ea8538',k:'',dir:true},
   {id:'rcs',n:'RCS',g:'Antrieb',c:'#b56ad8',k:'R'},
   {id:'hover',n:'Schwebetriebwerk',g:'Antrieb',c:'#7b80da',k:'V'},
@@ -591,8 +594,8 @@ const ALLOW=np({concrete:['BA'],solar:['BA'],cockpit:['CV','SV','HV'],rcs:['CV',
 const allowed=(t,cls)=>!ALLOW[t]||ALLOW[t].includes(cls);
 /* Gerätegrößen aus der Blockliste, wie im Spiel: Breite × Höhe × Länge */
 const DEF_SZ={
-  large:{generator:['1x1x1','3x3x3'],fuel:['1x1x1','1x2x1'],cockpit:['1x1x1'],thruster:['1x1x1','3x3x7'],warp:['3x3x5'],constructor:['2x2x2','3x3x3'],clone:['1x1x2'],shield:['2x2x2'],turret:['3x3x3'],weapon:['1x1x1']},
-  small:{generator:['1x1x1','1x2x1'],cockpit:['1x1x2','3x1x3'],thruster:['1x1x1','1x1x3'],hover:['1x1x1','2x1x2'],warp:['1x1x2'],constructor:['1x1x2','1x2x1'],shield:['1x1x1'],weapon:['1x1x3','1x1x4'],turret:['1x1x1','2x2x2'],drill:['1x1x3','1x1x4']}};
+  large:{cpu2:['2x1x1'],cpu3:['2x1x1'],cpu4:['2x1x1'],generator:['1x1x1','3x3x3'],fuel:['1x1x1','1x2x1'],cockpit:['1x1x1'],thruster:['1x1x1','3x3x7'],warp:['3x3x5'],constructor:['2x2x2','3x3x3'],clone:['1x1x2'],shield:['2x2x2'],turret:['3x3x3'],weapon:['1x1x1']},
+  small:{cpu2:['2x1x1'],cpu3:['2x1x1'],cpu4:['2x1x1'],generator:['1x1x1','1x2x1'],cockpit:['1x1x2','3x1x3'],thruster:['1x1x1','1x1x3'],hover:['1x1x1','2x1x2'],warp:['1x1x2'],constructor:['1x1x2','1x2x1'],shield:['1x1x1'],weapon:['1x1x3','1x1x4'],turret:['1x1x1','2x2x2'],drill:['1x1x3','1x1x4']}};
 const parseSizes=str=>{const out=[],re=/(\d+)\s*[x×*]\s*(\d+)\s*[x×*]\s*(\d+)/gi;let m;while((m=re.exec(String(str))))out.push([m[1],m[2],m[3]].map(n=>Math.max(1,Math.min(16,+n))));return out};
 for(const g in DEF_SZ){DEF_SZ[g]=np(DEF_SZ[g]);for(const t in DEF_SZ[g])DEF_SZ[g][t]=parseSizes(DEF_SZ[g][t].join(','))}
 const fmtSz=a=>a.join('×');
@@ -1115,6 +1118,14 @@ function updateInfo(){
     TYPES.forEach(t=>{const n=c(t.id);if(n&&!allowed(t.id,cls))add('err',`${t.n} ist bei ${cls} nicht erlaubt (${n}×) – nur ${ALLOW[t.id].join(', ')}.`)});
     if(cls==='CV'&&c('weapon'))add('warn','Feste Waffen sind bei CV nur als Artillerie möglich.');
     if(cls==='SV'&&c('turret'))add('warn','Geschütztürme sind bei SV stark eingeschränkt.');
+    {const n={2:c('cpu2'),3:c('cpu3'),4:c('cpu4')};let top=1;
+      [2,3,4].forEach(k=>{const need=EXT_NEED[k];if(!n[k])return;
+        if(n[k]>need)add('err',`${n[k]} CPU-Erweiterungen T${k} – erlaubt sind höchstens ${need}.`);
+        else if(n[k]<need)add('warn',`${n[k]} von ${need} CPU-Erweiterungen T${k} – Stufe T${k} zählt erst, wenn alle ${need} eingebaut sind.`);
+        if(n[k]>=need)top=k});
+      const R=flyCalc(),lim=CPU_TIER[cls][top-1];
+      if(top>1)add('ok',`CPU-Stufe T${top} aktiv (${nf(lim,0)} CPU)`);
+      if(R.cpu>lim)add('warn',`CPU-Verbrauch ${nf(R.cpu,0)} über der Grenze von T${top} (${nf(lim,0)}) – Schub und Konstruktoren werden langsamer.${top<4?' Mehr CPU-Erweiterungen helfen.':''}`)}
     if(A.parts>1) add('warn',`${A.loose} Feld${A.loose===1?'':'er'} in ${A.parts-1} losen Teil${A.parts>2?'en':''} ohne Verbindung zum Hauptkörper.`);
   }
   $('#checks').innerHTML=L.map(([l,t])=>`<li><span class="dot ${l}"></span><span>${t}</span></li>`).join('');
@@ -1138,7 +1149,7 @@ const STATS={
   small:{steel:[['1x1x1',8,0,0]],hsteel:[['1x1x1',32,0,0]],csteel:[['1x1x1',64,0,0]],xsteel:[['1x1x1',64,0,0]],carbon:[['1x1x1',3,0,0]],window:[['1x1x1',24,0,0]],
     core:[['1x1x1',140,0,5]],cockpit:[['1x1x2',845,0,10],['3x1x3',1390,0,10]],generator:[['1x1x1',148,87,0,700],['1x2x1',262,187,0,1500]],
     fuel:[['1x1x1',42,75,1],['1x2x1',88,150,1]],o2:[['1x1x1',69,40,3]],thruster:[['1x1x1',282,123,32,170],['1x1x3',406,203,38,275]],
-    rcs:[['1x1x1',256,1,10,100]],hover:[['1x1x1',140,50,10,200],['2x1x2',340,200,40,800]],warp:[['1x1x2',1490,3000,25]],cargo:[['1x1x1',45,15,1]],
+    rcs:[['1x1x1',256,1,10,100]],cpu2:[['2x1x1',250,0,5]],cpu3:[['2x1x1',500,0,7]],cpu4:[['2x1x1',750,0,10]],hover:[['1x1x1',140,50,10,200],['2x1x2',340,200,40,800]],warp:[['1x1x2',1490,3000,25]],cargo:[['1x1x1',45,15,1]],
     constructor:[['1x1x2',507,2000,420],['1x2x1',507,2000,420]],food:[['1x1x1',62,30,3]],medstation:[['1x1x1',70,50,2]],clone:[['1x1x2',890,0,10]],
     door:[['1x1x1',183,0,1]],light:[['1x1x1',.2,0,1]],gear:[['1x1x1',171,0,1]],shield:[['1x1x1',1630,1630,3600]],
     weapon:[['1x1x3',365,720,5],['1x1x4',1896,2490,20]],turret:[['1x1x1',500,1100,15],['2x2x2',1050,1560,15]],drill:[['1x1x3',650,200,250],['1x1x4',2600,1200,250]]},
@@ -1147,16 +1158,20 @@ const STATS={
   large:{steel:[['1x1x1',1000,0,0]],hsteel:[['1x1x1',2000,0,0]],csteel:[['1x1x1',4000,0,0]],xsteel:[['1x1x1',3910,0,0]],carbon:[['1x1x1',100,0,0]],wood:[['1x1x1',360,0,0]],
     concrete:[['1x1x1',1100,0,0]],window:[['1x1x1',330,0,0]],core:[['1x1x1',140,0,5]],cockpit:[['1x1x1',800,0,20]],
     generator:[['1x1x1',1480,312,0,2500],['3x3x3',13377,3125,0,25000]],fuel:[['1x1x1',1386,300,1],['1x2x1',2513,675,1]],o2:[['1x1x1',810,200,5]],
-    solar:[['1x1x1',730,45,0]],thruster:[['1x1x1',9496,13340,720,18100],['3x3x7',62897,533600,12442,920000]],rcs:[['1x1x1',15960,1,25,10000]],
+    solar:[['1x1x1',730,45,0]],thruster:[['1x1x1',9496,13340,720,18100],['3x3x7',62897,533600,12442,920000]],rcs:[['1x1x1',15960,1,25,10000]],cpu2:[['2x1x1',1075,0,50]],cpu3:[['2x1x1',2150,0,85]],cpu4:[['2x1x1',3225,0,100]],
     warp:[['3x3x5',82200,40000,25]],cargo:[['1x1x1',50,15,1]],constructor:[['2x2x2',4114,20000,500],['3x3x3',13800,40000,1500]],plot:[['1x1x1',2080,0,0]],
     food:[['1x1x1',1000,200,150]],medstation:[['1x1x1',595,200,2]],clone:[['1x1x2',1065,0,10]],door:[['1x1x1',295,0,1]],light:[['1x1x1',.4,0,1]],
     gear:[['1x1x1',1700,0,1]],shield:[['2x2x2',12920,18100,18000]],turret:[['3x3x3',6120,2500,5]],weapon:[['1x1x1',2485,480,10]]},
-  ba:{shield:[['2x2x2',12920,24700,25000]]}};
+  ba:{shield:[['2x2x2',12920,24700,25000]],cpu2:[['2x1x1',1150,0,50]]}};
 /* CPU-Grenzen je Stufe (Kern = T1, Erweiterungen T2–T4) */
 const CPU_TIER={HV:[5000,12000,30000,70000],SV:[6000,15000,40000,100000],CV:[200000,500000,1500000,10000000],BA:[80000,200000,500000,1300000]};
 const VMAX_DEF={HV:{planet:20,space:20},SV:{planet:60,space:120},CV:{planet:60,space:100},BA:{planet:0,space:0}};
 const G0=9.81;
-let OV=np(), FLY={env:'planet',g:1,tier:1,cpu:true,vmax:{}};
+const EXT_NEED={2:1,3:2,4:4};
+/* Stufe aus den eingebauten Erweiterungen: eine Stufe zählt nur, wenn alle ihre Erweiterungen da sind */
+function tierInfo(){const n={2:0,3:0,4:0};S.blocks.forEach(v=>{const m=/^cpu(\d)$/.exec(v.t);if(m)n[m[1]]++});
+  let t=1;[2,3,4].forEach(k=>{if(n[k]>=EXT_NEED[k])t=k});return {n,tier:t}}
+let OV=np(), FLY={env:'planet',g:1,tier2:0,cpu:true,vmax:{}};
 try{const o=store();if(o.stats1&&typeof o.stats1==='object')OV=np(o.stats1);if(o.fly)FLY=Object.assign(FLY,o.fly)}catch(e){}
 const saveFly=()=>{const o=store();o.fly=FLY;storeSet(o)}, saveOV=()=>{const o=store();o.stats1=OV;storeSet(o)};
 const szVol=s=>s.split('x').reduce((a,b)=>a*(+b||1),1);
@@ -1182,14 +1197,14 @@ function flyCalc(){
   const c=[0,0,0];if(m>0)pts.forEach(p=>{for(let i=0;i<3;i++)c[i]+=p[i]*p[3]/m});
   let Ix=0,Iy=0;pts.forEach(([x,y,z,mm,w,h,l])=>{const dx=x-c[0],dy=y-c[1],dz=z-c[2];Ix+=mm*(dy*dy+dz*dz+(h*h+l*l)/12);Iy+=mm*(dx*dx+dz*dz+(w*w+l*l)/12)});
   const env=cls==='HV'?'planet':FLY.env,g=env==='space'?0:Math.max(0,+FLY.g||0)*G0;
-  const lim=CPU_TIER[cls][(FLY.tier||1)-1],over=cpu/lim-1,eff=FLY.cpu&&over>0?Math.max(.5,1-.5*over):1;
+  const TI=tierInfo(),tier=FLY.tier2||TI.tier,lim=CPU_TIER[cls][tier-1],over=cpu/lim-1,eff=FLY.cpu&&over>0?Math.max(.5,1-.5*over):1;
   const a={};DORDER.forEach(d=>a[d]=m>0?F[d]*1000*eff/m:0);
   const net={...a};if(cls!=='HV'){net.u=a.u-g;net.d=a.d+g}
   const weight=m*g/1000; // kN
   const liftF=cls==='HV'?lift:F.u*eff, liftR=g>0&&m>0?liftF/weight:Infinity;
   const I=(Ix+Iy)/2,alpha=I>0?tq*1000*eff/I:0,t90=alpha>0?2*Math.sqrt((Math.PI/2)/alpha):Infinity;
   const vmax=FLY.vmax[cls+'|'+env]||VMAX_DEF[cls][env]||0;
-  return {cls,m,cpu,lim,over,eff,eIn,eThr,eOut,F,a,net,g,weight,liftF,liftR,tq,alpha,t90,vmax,miss,scaled,lift}}
+  return {cls,tier,autoTier:!FLY.tier2,m,cpu,lim,over,eff,eIn,eThr,eOut,F,a,net,g,weight,liftF,liftR,tq,alpha,t90,vmax,miss,scaled,lift}}
 /* Strecke D mit Anfahr-Beschleunigung a1, Bremsverzögerung a2 und Höchstgeschwindigkeit v */
 function trip(D,a1,a2,v){if(!(a1>0)||!(a2>0)||!(v>0))return null;
   const dAcc=v*v/(2*a1),dDec=v*v/(2*a2);
@@ -1221,7 +1236,7 @@ function tilesHTML(R,Q){const t=(k,v,[l,txt])=>`<div class="ftile"><span class="
   return t('Masse',fmtMass(R.m),['info',R.scaled?'teils hochgerechnet':'aus Blockliste'])+
     t('Beweglichkeit',nf(Q.mobV*G0,1)+' m/s²',Q.mob)+
     t(R.cls==='HV'?'Schwebekraft':'Hubkraft',liftTxt,Q.lift)+
-    t('CPU',nf(R.cpu,0)+' / '+nf(R.lim,0),Q.cpu)+
+    t('CPU · T'+R.tier+(R.autoTier?'':' (fest)'),nf(R.cpu,0)+' / '+nf(R.lim,0),Q.cpu)+
     t('Energie',nf(R.eOut,0)+' kW',Q.pow)+
     t('90°-Drehung',Number.isFinite(R.t90)?nf(R.t90,1)+' s':'–',Q.turn)}
 function renderFlyTiles(){const el=$('#ftiles');if(!el)return;
@@ -1230,7 +1245,8 @@ function renderFlyTiles(){const el=$('#ftiles');if(!el)return;
 
 function syncFlyCtl(){const cls=S.cls;
   document.querySelectorAll('[data-env]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.env===FLY.env));
-  document.querySelectorAll('[data-tier]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.tier===FLY.tier));
+  document.querySelectorAll('[data-tier]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.tier===(FLY.tier2||0)));
+  const TI=tierInfo();document.querySelector('[data-tier="0"]').textContent='Auto (T'+TI.tier+')';
   $('#gRow').hidden=FLY.env==='space';$('#flyG').value=FLY.g;$('#flyCpu').checked=FLY.cpu;
   $('#flyV').value=FLY.vmax[cls+'|'+FLY.env]||VMAX_DEF[cls][FLY.env]||0;
   document.querySelector('[data-env="space"]').disabled=cls==='HV'}
@@ -1281,7 +1297,7 @@ function drawFlyChart(){const cv=$('#flyChart'),box=$('#chartBox'),dpr=window.de
   new ResizeObserver(()=>{if(!$('#flyModal').hidden&&!$('#chartBox').hidden)drawFlyChart()}).observe($('#chartBox'))})();
 $('#flyBtn').onclick=()=>{if(S.cls==='HV')FLY.env='planet';openModal('flyModal');renderFly()};
 document.querySelectorAll('[data-env]').forEach(b=>b.onclick=()=>{FLY.env=b.dataset.env;saveFly();renderFly();renderFlyTiles()});
-document.querySelectorAll('[data-tier]').forEach(b=>b.onclick=()=>{FLY.tier=+b.dataset.tier;saveFly();renderFly();renderFlyTiles()});
+document.querySelectorAll('[data-tier]').forEach(b=>b.onclick=()=>{FLY.tier2=+b.dataset.tier;saveFly();renderFly();renderFlyTiles()});
 document.querySelectorAll('[data-gp]').forEach(b=>b.onclick=()=>{FLY.g=+b.dataset.gp;saveFly();renderFly();renderFlyTiles()});
 $('#flyG').onchange=()=>{const v=parseFloat(String($('#flyG').value).replace(',','.'));FLY.g=isFinite(v)?Math.max(0,Math.min(5,v)):1;saveFly();renderFly();renderFlyTiles()};
 $('#flyCpu').onchange=()=>{FLY.cpu=$('#flyCpu').checked;saveFly();renderFly();renderFlyTiles()};
