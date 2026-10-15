@@ -224,6 +224,31 @@ textarea{width:100%;min-height:90px;font-family:var(--f-mono);font-size:.78rem;r
 #toast.on{opacity:1}
 kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 4px;background:var(--panel-2)}
 
+/* Flugwerte & Flugtest */
+.ftiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:6px}
+.ftile{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:7px 8px;display:flex;flex-direction:column;gap:1px;min-width:0}
+.ftile .k{font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+.ftile .v{font-family:var(--f-mono);font-size:1rem;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ftile .r{display:flex;align-items:center;gap:5px;font-size:.74rem}
+.ftile .r .dot{margin-top:0}
+.fbtns{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.fctl{display:grid;gap:10px}
+.fctl .seg3.s2{grid-template-columns:repeat(2,1fr)}
+.fctl .seg3.s4{grid-template-columns:repeat(4,1fr)}
+.fctl .inl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
+.ftab{width:100%;border-collapse:collapse;font-size:.82rem}
+.ftab th,.ftab td{padding:5px 4px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.ftab th{font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.ftab td:first-child,.ftab th:first-child{text-align:left}
+.ftab td{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.ftab td:first-child{font-family:var(--f-body)}
+.ftab td.bad{color:var(--err)}
+.fwrap{overflow-x:auto}
+.chartbox{position:relative;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;height:190px}
+#flyChart{position:absolute;inset:0;width:100%;height:100%;touch-action:pan-y}
+.ctip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 7px;font-size:.74rem;font-family:var(--f-mono);box-shadow:var(--shadow);white-space:nowrap;z-index:2}
+.fnote{font-size:.74rem;color:var(--muted);margin:0;line-height:1.45}
+
 /* Handy: eine Ansicht nach der anderen (Tabs) */
 @media (max-width:959px){
   .shell[data-view="grid"] .side{display:none}
@@ -300,6 +325,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
         <button class="btn" id="libBtn">Meine Designs</button>
         <button class="btn" id="newBtn">Neues Design</button>
         <button class="btn" id="szBtn">Gerätegrößen</button>
+        <button class="btn" id="statBtn">Spielwerte</button>
         <button class="btn" id="xBtn">Dateien &amp; Teilen</button>
         <button class="btn" id="installBtn" hidden>App installieren</button>
         <button class="btn" id="discBtn">Haftung &amp; Info</button>
@@ -332,6 +358,8 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
       </section>
       <section class="pane infopane" aria-label="Info">
         <div class="meta" id="meta"></div>
+        <div><h2>Flugwerte &amp; Bewertung</h2><div class="ftiles" id="ftiles"></div>
+          <div class="fbtns"><button class="btn primary" id="flyBtn">Flugtest öffnen</button><button class="btn" id="statBtn2">Spielwerte</button></div></div>
         <div><h2>Prüfliste</h2><ul class="checks" id="checks"></ul></div>
         <div><h2>Stückliste</h2><table class="bom" id="bom"></table></div>
         <p class="hint keys">Tastatur: <kbd>B</kbd> Blöcke · <kbd>Q</kbd>/<kbd>E</kbd> Ebene · <kbd>R</kbd> waagrecht drehen · <kbd>T</kbd> kippen · <kbd>F</kbd> rollen · <kbd>M</kbd> spiegeln · <kbd>Strg</kbd>+<kbd>Z</kbd> rückgängig · Rechtsklick löscht</p>
@@ -451,6 +479,37 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
     <p class="msg">Wie viele Blöcke ein Gerät belegt, wie im Spiel als <b>Breite × Höhe × Länge</b>. Mehrere Größen mit Komma trennen, z. B. „1x1x1, 3x3x3“. Vorgabe ist deine Blockliste; geänderte Felder sind orange umrandet. Bereits gesetzte Geräte behalten ihre Größe.</p>
     <div class="sztable"><table id="szTable"></table></div>
     <div class="row"><button class="btn" id="szReset">Alle wie in der Blockliste</button><p class="msg" id="szMsg" aria-live="polite"></p></div>
+  </div>
+</div>
+
+<div class="modal" id="flyModal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="flyTitle">
+    <div class="shead"><h3 id="flyTitle">Flugtest</h3><button class="ib" data-close="flyModal" aria-label="Schließen">✕</button></div>
+    <div class="fctl">
+      <div class="fld"><span>Umgebung</span><div class="seg3 s2" role="group" aria-label="Umgebung"><button data-env="planet" aria-pressed="true">Planet</button><button data-env="space" aria-pressed="false">Weltraum</button></div></div>
+      <div class="inl" id="gRow"><label for="flyG">Schwerkraft</label><input type="number" id="flyG" min="0" max="5" step="0.05" value="1" style="width:5em"> g
+        <button class="btn" data-gp="0.4">Mond 0,4</button><button class="btn" data-gp="1">1,0</button><button class="btn" data-gp="1.5">1,5</button></div>
+      <div class="fld"><span>CPU-Stufe (Tier)</span><div class="seg3 s4" role="group" aria-label="CPU-Stufe"><button data-tier="1">T1</button><button data-tier="2">T2</button><button data-tier="3">T3</button><button data-tier="4">T4</button></div></div>
+      <div class="inl"><label class="chk"><input type="checkbox" id="flyCpu" checked> CPU-Grenze anwenden</label></div>
+      <div class="inl"><label for="flyV">Höchstgeschwindigkeit</label><input type="number" id="flyV" min="1" max="1000" step="1" style="width:5em"> m/s</div>
+    </div>
+    <div class="ftiles" id="flyTiles"></div>
+    <div><h2>Schub je Richtung</h2><div class="fwrap"><table class="ftab" id="flyDirs"></table></div></div>
+    <div><h2>Testflug</h2><p class="hint" id="flyMis"></p>
+      <div class="chartbox" id="chartBox"><canvas id="flyChart" aria-label="Geschwindigkeit über die Zeit beim Testflug"></canvas><div class="ctip" id="ctip" hidden></div></div>
+      <div class="fwrap"><table class="ftab" id="flyPhases"></table></div></div>
+    <p class="fnote" id="flyNote"></p>
+    <button class="btn primary" data-close="flyModal">Fertig</button>
+  </div>
+</div>
+
+<div class="modal" id="statModal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="statTitle">
+    <div class="shead"><h3 id="statTitle">Spielwerte</h3><button class="ib" data-close="statModal" aria-label="Schließen">✕</button></div>
+    <p class="msg">Werte je Block aus der Vanilla-Blockliste (BlocksConfig). Im Spiel stehen sie im Tooltip eines Blocks. Weicht deine Spielversion ab, trag den Wert hier ein; geänderte Felder sind orange umrandet. <b>Wert</b> ist je nach Gerät Schub (kN), Drehmoment (kNm), Schwebekraft (kN) oder Leistung (kW).</p>
+    <div class="fld"><span>Gruppe</span><select id="statGrp"><option value="small">Klein · SV</option><option value="hv">Klein · HV (nur Abweichungen)</option><option value="large">Groß · CV / BA</option><option value="ba">Groß · nur BA (Abweichungen)</option></select></div>
+    <div class="sztable"><table id="statTable"></table></div>
+    <div class="row"><button class="btn" id="statReset">Alle wie in der Blockliste</button><p class="msg" id="statMsg" aria-live="polite"></p></div>
   </div>
 </div>
 
@@ -1068,7 +1127,179 @@ function updateInfo(){
   const bs=CLASSES[cls].bs,fm=n=>(n*bs).toLocaleString('de-AT',{maximumFractionDigits:1});
   const ext=S.occ.size?[mx[0]-mn[0]+1,mx[2]-mn[2]+1,mx[1]-mn[1]+1]:[0,0,0];
   $('#meta').innerHTML=`<b>${S.blocks.size}</b> Teile · Blockgröße ${fm(1)} m<br>Abmessung <b>${fm(ext[0])} × ${fm(ext[1])} × ${fm(ext[2])} m</b> (B × L × H)`;
+  renderFlyTiles();
 }
+
+/* ---------- Spielwerte (Vanilla-Blockliste, BlocksConfig.ecf) ----------
+   Eintrag: [Größe B×H×L, Masse kg, CPU, Strombedarf kW, Wert]
+   Wert: Schub kN (Düse), Drehmoment kNm (RCS), Schwebekraft kN (Schwebetriebwerk), Leistung kW (Generator) */
+const VAL={thruster:['thr','Schub','kN'],rcs:['tq','Drehmoment','kNm'],hover:['lift','Schwebekraft','kN'],generator:['out','Leistung','kW']};
+const STATS={
+  small:{steel:[['1x1x1',8,0,0]],hsteel:[['1x1x1',32,0,0]],csteel:[['1x1x1',64,0,0]],xsteel:[['1x1x1',64,0,0]],carbon:[['1x1x1',3,0,0]],window:[['1x1x1',24,0,0]],
+    core:[['1x1x1',140,0,5]],cockpit:[['1x1x2',845,0,10],['3x1x3',1390,0,10]],generator:[['1x1x1',148,87,0,700],['1x2x1',262,187,0,1500]],
+    fuel:[['1x1x1',42,75,1],['1x2x1',88,150,1]],o2:[['1x1x1',69,40,3]],thruster:[['1x1x1',282,123,32,170],['1x1x3',406,203,38,275]],
+    rcs:[['1x1x1',256,1,10,100]],hover:[['1x1x1',140,50,10,200],['2x1x2',340,200,40,800]],warp:[['1x1x2',1490,3000,25]],cargo:[['1x1x1',45,15,1]],
+    constructor:[['1x1x2',507,2000,420],['1x2x1',507,2000,420]],food:[['1x1x1',62,30,3]],medstation:[['1x1x1',70,50,2]],clone:[['1x1x2',890,0,10]],
+    door:[['1x1x1',183,0,1]],light:[['1x1x1',.2,0,1]],gear:[['1x1x1',171,0,1]],shield:[['1x1x1',1630,1630,3600]],
+    weapon:[['1x1x3',365,720,5],['1x1x4',1896,2490,20]],turret:[['1x1x1',500,1100,15],['2x2x2',1050,1560,15]],drill:[['1x1x3',650,200,250],['1x1x4',2600,1200,250]]},
+  hv:{thruster:[['1x1x1',268,88,30,130],['1x1x3',390,145,45,235]],rcs:[['1x1x1',265,1,10,80]],shield:[['1x1x1',1630,1540,3600]],constructor:[['1x1x2',390,2000,420],['1x2x1',390,2000,420]],
+    medstation:[['1x1x1',130,95,10]],turret:[['1x1x1',500,900,5],['2x2x2',1050,1560,5]],drill:[['1x1x3',650,200,250],['1x1x4',2600,1200,250]]},
+  large:{steel:[['1x1x1',1000,0,0]],hsteel:[['1x1x1',2000,0,0]],csteel:[['1x1x1',4000,0,0]],xsteel:[['1x1x1',3910,0,0]],carbon:[['1x1x1',100,0,0]],wood:[['1x1x1',360,0,0]],
+    concrete:[['1x1x1',1100,0,0]],window:[['1x1x1',330,0,0]],core:[['1x1x1',140,0,5]],cockpit:[['1x1x1',800,0,20]],
+    generator:[['1x1x1',1480,312,0,2500],['3x3x3',13377,3125,0,25000]],fuel:[['1x1x1',1386,300,1],['1x2x1',2513,675,1]],o2:[['1x1x1',810,200,5]],
+    solar:[['1x1x1',730,45,0]],thruster:[['1x1x1',9496,13340,720,18100],['3x3x7',62897,533600,12442,920000]],rcs:[['1x1x1',15960,1,25,10000]],
+    warp:[['3x3x5',82200,40000,25]],cargo:[['1x1x1',50,15,1]],constructor:[['2x2x2',4114,20000,500],['3x3x3',13800,40000,1500]],plot:[['1x1x1',2080,0,0]],
+    food:[['1x1x1',1000,200,150]],medstation:[['1x1x1',595,200,2]],clone:[['1x1x2',1065,0,10]],door:[['1x1x1',295,0,1]],light:[['1x1x1',.4,0,1]],
+    gear:[['1x1x1',1700,0,1]],shield:[['2x2x2',12920,18100,18000]],turret:[['3x3x3',6120,2500,5]],weapon:[['1x1x1',2485,480,10]]},
+  ba:{shield:[['2x2x2',12920,24700,25000]]}};
+/* CPU-Grenzen je Stufe (Kern = T1, Erweiterungen T2–T4) */
+const CPU_TIER={HV:[5000,12000,30000,70000],SV:[6000,15000,40000,100000],CV:[200000,500000,1500000,10000000],BA:[80000,200000,500000,1300000]};
+const VMAX_DEF={HV:{planet:20,space:20},SV:{planet:60,space:120},CV:{planet:60,space:100},BA:{planet:0,space:0}};
+const G0=9.81;
+let OV=np(), FLY={env:'planet',g:1,tier:1,cpu:true,vmax:{}};
+try{const o=store();if(o.stats1&&typeof o.stats1==='object')OV=np(o.stats1);if(o.fly)FLY=Object.assign(FLY,o.fly)}catch(e){}
+const saveFly=()=>{const o=store();o.fly=FLY;storeSet(o)}, saveOV=()=>{const o=store();o.stats1=OV;storeSet(o)};
+const szVol=s=>s.split('x').reduce((a,b)=>a*(+b||1),1);
+const statSets=cls=>cls==='HV'?['hv','small']:cls==='BA'?['ba','large']:[CLASSES[cls].grp];
+function entry(gk,t,i){const e=STATS[gk][t][i],o=OV[gk+'|'+t+'|'+i]||{},pick=(k,d)=>o[k]!=null&&isFinite(o[k])?+o[k]:d;
+  return {sz:e[0],m:pick('m',e[1]),cpu:pick('cpu',e[2]),e:pick('e',e[3]),val:pick('val',e[4]||0)}}
+function devStat(cls,t,v){let gk=null;for(const k of statSets(cls))if(STATS[k][t]){gk=k;break}
+  if(!gk)return null;const list=STATS[gk][t],vol=dims(v).reduce((a,b)=>a*b,1);let bi=0,bd=Infinity;
+  list.forEach((e,i)=>{const d=Math.abs(Math.log(vol/szVol(e[0])));if(d<bd-1e-9){bd=d;bi=i}});
+  const st=entry(gk,t,bi);/* eigene Größe außerhalb der Liste: Masse, CPU und Wert mit dem Rauminhalt hochrechnen */
+  if(!TM[t].hull&&bd>.01){const f=vol/szVol(list[bi][0]);st.m*=f;st.cpu*=f;st.e*=f;st.val*=f;st.scaled=true}
+  return st}
+
+/* ---------- Flugberechnung ---------- */
+function flyCalc(){
+  const cls=S.cls,bs=CLASSES[cls].bs,F={f:0,b:0,l:0,r:0,u:0,d:0},pts=[],miss=new Set();
+  let m=0,cpu=0,eIn=0,eThr=0,eOut=0,tq=0,lift=0,scaled=0;
+  S.blocks.forEach((v,k)=>{const st=devStat(cls,v.t,v);if(!st){miss.add(v.t);return}if(st.scaled)scaled++;
+    const [x,y,z]=P3(k),[w,h,l]=dims(v);m+=st.m;cpu+=st.cpu;
+    if(v.t==='thruster'){F[v.d]+=st.val;eThr+=st.e}else eIn+=st.e;
+    if(v.t==='generator')eOut+=st.val;if(v.t==='rcs')tq+=st.val;if(v.t==='hover')lift+=st.val;
+    pts.push([(x+w/2)*bs,(y+h/2)*bs,(z+l/2)*bs,st.m,w*bs,h*bs,l*bs])});
+  const c=[0,0,0];if(m>0)pts.forEach(p=>{for(let i=0;i<3;i++)c[i]+=p[i]*p[3]/m});
+  let Ix=0,Iy=0;pts.forEach(([x,y,z,mm,w,h,l])=>{const dx=x-c[0],dy=y-c[1],dz=z-c[2];Ix+=mm*(dy*dy+dz*dz+(h*h+l*l)/12);Iy+=mm*(dx*dx+dz*dz+(w*w+l*l)/12)});
+  const env=cls==='HV'?'planet':FLY.env,g=env==='space'?0:Math.max(0,+FLY.g||0)*G0;
+  const lim=CPU_TIER[cls][(FLY.tier||1)-1],over=cpu/lim-1,eff=FLY.cpu&&over>0?Math.max(.5,1-.5*over):1;
+  const a={};DORDER.forEach(d=>a[d]=m>0?F[d]*1000*eff/m:0);
+  const net={...a};if(cls!=='HV'){net.u=a.u-g;net.d=a.d+g}
+  const weight=m*g/1000; // kN
+  const liftF=cls==='HV'?lift:F.u*eff, liftR=g>0&&m>0?liftF/weight:Infinity;
+  const I=(Ix+Iy)/2,alpha=I>0?tq*1000*eff/I:0,t90=alpha>0?2*Math.sqrt((Math.PI/2)/alpha):Infinity;
+  const vmax=FLY.vmax[cls+'|'+env]||VMAX_DEF[cls][env]||0;
+  return {cls,m,cpu,lim,over,eff,eIn,eThr,eOut,F,a,net,g,weight,liftF,liftR,tq,alpha,t90,vmax,miss,scaled,lift}}
+/* Strecke D mit Anfahr-Beschleunigung a1, Bremsverzögerung a2 und Höchstgeschwindigkeit v */
+function trip(D,a1,a2,v){if(!(a1>0)||!(a2>0)||!(v>0))return null;
+  const dAcc=v*v/(2*a1),dDec=v*v/(2*a2);
+  if(dAcc+dDec<=D){const tc=(D-dAcc-dDec)/v;return {t:v/a1+tc+v/a2,vp:v,t1:v/a1,t2:v/a1+tc}}
+  const vp=Math.sqrt(2*D*a1*a2/(a1+a2));return {t:vp/a1+vp/a2,vp,t1:vp/a1,t2:vp/a1}}
+const tripV=(p,t)=>t<p.t1?p.vp*t/p.t1:t<p.t2?p.vp:Math.max(0,p.vp*(p.t-t)/(p.t-p.t2));
+function mission(R){const P=[],add=(n,D,a1,a2)=>P.push({n,D,a1,a2,p:trip(D,a1,a2,R.vmax)});
+  if(R.cls==='BA')return {P,why:'Basen fliegen nicht.'};
+  if(R.cls==='HV'){if(R.g>0&&R.liftR<1)return {P,why:'Die Schwebetriebwerke tragen das Gewicht nicht – das HV hebt nicht ab.'};
+    add('Vorwärts 1000 m',1000,R.a.f,R.a.b);add('Rückwärts 200 m',200,R.a.b,R.a.f);add('Seitwärts 100 m',100,R.a.r,R.a.l);return {P}}
+  if(R.g>0){if(R.liftR<1)return {P,why:'Zu wenig Schub nach oben – das Schiff hebt bei dieser Schwerkraft nicht ab.'};
+    add('Steigen auf 100 m',100,R.net.u,R.net.d);add('Vorwärts 1000 m',1000,R.a.f,R.a.b);add('Sinken 100 m',100,R.net.d,R.net.u);return {P}}
+  add('Vorwärts 1000 m',1000,R.a.f,R.a.b);add('Seitwärts 200 m',200,R.a.r,R.a.l);add('Aufwärts 200 m',200,R.a.u,R.a.d);return {P}}
+
+/* Bewertung: [Stufe, Text] */
+const nf=(n,d=1)=>Number.isFinite(n)?n.toLocaleString('de-AT',{maximumFractionDigits:d,minimumFractionDigits:0}):'–';
+const fmtMass=kg=>kg>=1e6?nf(kg/1e6,2)+' kt':kg>=1000?nf(kg/1000,kg>=1e5?0:1)+' t':nf(kg,0)+' kg';
+function rate(R){const out={},cv=R.cls==='CV'?.25:1,mob=(R.cls==='HV'?['f','b','l','r']:DORDER).map(d=>R.a[d]/G0);
+  const mn=Math.min(...mob)/cv;
+  out.mob=R.m===0?['info','–']:mn<=0?['err','fehlt Richtung']:mn>=2?['ok','sehr gut']:mn>=1?['ok','gut']:mn>=.5?['warn','mäßig']:['err','träge'];
+  out.mobV=Math.min(...mob);
+  out.lift=R.cls==='BA'||R.g===0?['info',R.g===0?'Weltraum':'–']:R.liftR>=2?['ok','sehr gut']:R.liftR>=1.5?['ok','gut']:R.liftR>=1.1?['warn','knapp']:['err','zu schwach'];
+  const u=R.cpu/R.lim;out.cpu=u<=.8?['ok','im Rahmen']:u<=1?['warn','knapp']:['err',FLY.cpu?'überschritten – Schub '+nf(R.eff*100,0)+' %':'überschritten'];
+  const need=R.eIn+R.eThr;out.pow=R.eOut===0?(need?['err','kein Generator']:['info','–']):R.eOut>=need?['ok','reicht bei Volllast']:R.eOut>=R.eIn?['warn','reicht nicht bei Volllast']:['err','zu schwach'];
+  const tt=R.t90*cv;out.turn=R.cls==='BA'?['info','–']:!R.tq?['err','kein RCS']:tt<1.5?['ok','sehr wendig']:tt<3?['ok','wendig']:tt<6?['warn','mäßig']:['err','träge'];
+  return out}
+function tilesHTML(R,Q){const t=(k,v,[l,txt])=>`<div class="ftile"><span class="k">${k}</span><span class="v">${v}</span><span class="r"><span class="dot ${l}"></span>${txt}</span></div>`;
+  const liftTxt=R.cls==='BA'?'–':R.g===0?'–':nf(R.liftR,2)+' : 1';
+  return t('Masse',fmtMass(R.m),['info',R.scaled?'teils hochgerechnet':'aus Blockliste'])+
+    t('Beweglichkeit',nf(Q.mobV*G0,1)+' m/s²',Q.mob)+
+    t(R.cls==='HV'?'Schwebekraft':'Hubkraft',liftTxt,Q.lift)+
+    t('CPU',nf(R.cpu,0)+' / '+nf(R.lim,0),Q.cpu)+
+    t('Energie',nf(R.eOut,0)+' kW',Q.pow)+
+    t('90°-Drehung',Number.isFinite(R.t90)?nf(R.t90,1)+' s':'–',Q.turn)}
+function renderFlyTiles(){const el=$('#ftiles');if(!el)return;
+  if(!S.blocks.size){el.innerHTML='<p class="hint">Noch keine Blöcke.</p>';return}
+  const R=flyCalc();el.innerHTML=tilesHTML(R,rate(R));if(!$('#flyModal').hidden)renderFly()}
+
+function syncFlyCtl(){const cls=S.cls;
+  document.querySelectorAll('[data-env]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.env===FLY.env));
+  document.querySelectorAll('[data-tier]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.tier===FLY.tier));
+  $('#gRow').hidden=FLY.env==='space';$('#flyG').value=FLY.g;$('#flyCpu').checked=FLY.cpu;
+  $('#flyV').value=FLY.vmax[cls+'|'+FLY.env]||VMAX_DEF[cls][FLY.env]||0;
+  document.querySelector('[data-env="space"]').disabled=cls==='HV'}
+function renderFly(){const R=flyCalc(),Q=rate(R),cls=R.cls;syncFlyCtl();
+  $('#flyTitle').textContent='Flugtest · '+(S.name||'Unbenannt')+' ('+cls+')';
+  $('#flyTiles').innerHTML=tilesHTML(R,Q);
+  const dirs=cls==='HV'?['f','b','l','r']:DORDER;
+  $('#flyDirs').innerHTML='<tr><th>Richtung</th><th>Schub kN</th><th>Beschl. m/s²</th><th>in g</th><th>0 → max</th><th>Bremsweg</th></tr>'+dirs.map(d=>{
+    const a=R.net[d],opp={f:'b',b:'f',l:'r',r:'l',u:'d',d:'u'}[d],br=R.net[opp];const bad=a<=0?' class="bad"':'';
+    return `<tr><td>${DIRS[d].a} ${DIRS[d].n}</td><td>${nf(R.F[d]*R.eff,0)}</td><td${bad}>${nf(a,1)}</td><td${bad}>${nf(a/G0,2)}</td><td>${a>0&&R.vmax?nf(R.vmax/a,1)+' s':'–'}</td><td>${br>0&&R.vmax?nf(R.vmax*R.vmax/(2*br),0)+' m':'–'}</td></tr>`}).join('');
+  const M=mission(R);FLYM=M;
+  const tot=M.P.reduce((s,p)=>s+(p.p?p.p.t:0),0),ok=M.P.length&&M.P.every(p=>p.p);
+  $('#flyMis').textContent=M.why||(ok?`Ablauf aus dem Stand, je Abschnitt bis zum Stillstand. Gesamtdauer ${nf(tot,1)} s bei höchstens ${nf(R.vmax,0)} m/s.`:'Für mindestens einen Abschnitt fehlt Schub in eine Richtung.');
+  $('#flyPhases').innerHTML=M.P.length?'<tr><th>Abschnitt</th><th>Dauer</th><th>Spitze</th><th>Anfahren</th><th>Bremsen</th></tr>'+M.P.map(p=>p.p?
+    `<tr><td>${p.n}</td><td>${nf(p.p.t,1)} s</td><td>${nf(p.p.vp,0)} m/s</td><td>${nf(p.a1,1)} m/s²</td><td>${nf(p.a2,1)} m/s²</td></tr>`:
+    `<tr><td>${p.n}</td><td class="bad" colspan="4">nicht möglich – Schub fehlt</td></tr>`).join(''):'';
+  $('#chartBox').hidden=!ok;if(ok)drawFlyChart();
+  const notes=['Werte: Vanilla-Blockliste (BlocksConfig). Hüllenblöcke zählen unabhängig von der Form mit voller Masse und ohne CPU.',
+    'Die Düsenposition spielt in Empyrion keine Rolle, nur Richtung und Schub. Bei Planeten wirkt die Schwerkraft gegen „hoch“ und hilft bei „runter“.',
+    'Drehzeit ist eine Schätzung aus RCS-Drehmoment und Massenverteilung (beschleunigen und abbremsen, ohne Drehgrenze des Spiels).',
+    'CPU über der Grenze senkt den Schub schrittweise bis auf 50 % (bei doppeltem Verbrauch). Höchstgeschwindigkeit und Grenzen hängen von den Spieleinstellungen ab – oben anpassbar.'];
+  if(R.miss.size)notes.push('Ohne Werte: '+[...R.miss].map(t=>TM[t].n).join(', ')+'.');
+  if(R.scaled)notes.push(R.scaled+' Gerät(e) mit eigener Größe wurden nach Rauminhalt hochgerechnet.');
+  $('#flyNote').innerHTML=notes.join('<br>')}
+let FLYM=null;
+function drawFlyChart(){const cv=$('#flyChart'),box=$('#chartBox'),dpr=window.devicePixelRatio||1,W=box.clientWidth,H=box.clientHeight;if(!W||!FLYM)return;
+  cv.width=W*dpr;cv.height=H*dpr;const x=cv.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,W,H);
+  const cs=getComputedStyle(document.documentElement),col=n=>cs.getPropertyValue(n).trim();
+  const P=FLYM.P,tot=P.reduce((s,p)=>s+p.p.t,0),vm=Math.max(...P.map(p=>p.p.vp))||1;
+  const L=40,Rr=10,T=18,B=24,pw=W-L-Rr,ph=H-T-B,X=t=>L+t/tot*pw,Y=v=>T+ph-v/vm*ph;
+  x.font='11px '+col('--f-mono');x.fillStyle=col('--muted');x.strokeStyle=col('--line');x.lineWidth=1;
+  const step=[1,2,5,10,20,50,100,200].find(s=>vm/s<=4)||500;
+  for(let v=0;v<=vm+1e-6;v+=step){x.beginPath();x.moveTo(L,Y(v)+.5);x.lineTo(W-Rr,Y(v)+.5);x.stroke();x.textAlign='right';x.fillText(v,L-6,Y(v)+4)}
+  x.textAlign='left';x.fillText('m/s',4,11);
+  let t0=0;x.textAlign='center';P.forEach((p,i)=>{if(i){x.setLineDash([3,3]);x.beginPath();x.moveTo(X(t0)+.5,T);x.lineTo(X(t0)+.5,T+ph);x.stroke();x.setLineDash([])}
+    x.fillText(p.n.replace(/ \d+ m$/,''),X(t0+p.p.t/2),H-8);t0+=p.p.t});
+  x.textAlign='right';x.fillText(nf(tot,1)+' s',W-Rr,11);
+  x.strokeStyle=col('--accent');x.lineWidth=2;x.lineJoin='round';x.beginPath();t0=0;
+  P.forEach(p=>{const q=p.p;[[0,0],[q.t1,q.vp],[q.t2,q.vp],[q.t,0]].forEach(([tt,v],j)=>{const px=X(t0+tt),py=Y(v);(j===0&&t0===0)?x.moveTo(px,py):x.lineTo(px,py)});t0+=q.t});x.stroke();
+  cv._map={L,pw,tot,X,Y}}
+(function(){const cv=$('#flyChart'),tip=$('#ctip');
+  const mv=e=>{const m=cv._map;if(!m||!FLYM)return;const r=cv.getBoundingClientRect(),px=e.clientX-r.left;let t=(px-m.L)/m.pw*m.tot;if(t<0||t>m.tot){tip.hidden=true;return}
+    let t0=0,ph=null;for(const p of FLYM.P){if(t<=t0+p.p.t){ph=p;break}t0+=p.p.t}if(!ph)return;const v=tripV(ph.p,t-t0);
+    drawFlyChart();const x=cv.getContext('2d'),cs=getComputedStyle(document.documentElement);x.strokeStyle=cs.getPropertyValue('--muted').trim();x.lineWidth=1;
+    x.beginPath();x.moveTo(m.X(t),18);x.lineTo(m.X(t),cv.clientHeight-24);x.stroke();x.fillStyle=cs.getPropertyValue('--accent').trim();x.beginPath();x.arc(m.X(t),m.Y(v),4,0,7);x.fill();
+    tip.hidden=false;tip.textContent=`${ph.n}: ${nf(t,1)} s · ${nf(v,0)} m/s`;const tw=tip.offsetWidth;tip.style.left=Math.min(Math.max(4,px-tw/2),r.width-tw-4)+'px';tip.style.top='4px'};
+  cv.addEventListener('pointermove',mv);cv.addEventListener('pointerdown',mv);cv.addEventListener('pointerleave',()=>{tip.hidden=true;drawFlyChart()});
+  new ResizeObserver(()=>{if(!$('#flyModal').hidden&&!$('#chartBox').hidden)drawFlyChart()}).observe($('#chartBox'))})();
+$('#flyBtn').onclick=()=>{if(S.cls==='HV')FLY.env='planet';openModal('flyModal');renderFly()};
+document.querySelectorAll('[data-env]').forEach(b=>b.onclick=()=>{FLY.env=b.dataset.env;saveFly();renderFly();renderFlyTiles()});
+document.querySelectorAll('[data-tier]').forEach(b=>b.onclick=()=>{FLY.tier=+b.dataset.tier;saveFly();renderFly();renderFlyTiles()});
+document.querySelectorAll('[data-gp]').forEach(b=>b.onclick=()=>{FLY.g=+b.dataset.gp;saveFly();renderFly();renderFlyTiles()});
+$('#flyG').onchange=()=>{const v=parseFloat(String($('#flyG').value).replace(',','.'));FLY.g=isFinite(v)?Math.max(0,Math.min(5,v)):1;saveFly();renderFly();renderFlyTiles()};
+$('#flyCpu').onchange=()=>{FLY.cpu=$('#flyCpu').checked;saveFly();renderFly();renderFlyTiles()};
+$('#flyV').onchange=()=>{const v=+$('#flyV').value,k=S.cls+'|'+FLY.env;if(v>0&&v!==VMAX_DEF[S.cls][FLY.env])FLY.vmax[k]=Math.min(1000,v);else delete FLY.vmax[k];saveFly();renderFly();renderFlyTiles()};
+
+/* Spielwerte bearbeiten */
+function renderStats(){const gk=$('#statGrp').value,tb=$('#statTable'),G=STATS[gk];
+  const inp=(id,f,v,own)=>`<input type="text" inputmode="decimal" data-k="${id}" data-f="${f}" value="${String(+(+v).toFixed(2)).replace('.',',')}" style="width:5.5em${own?';border-color:var(--accent)':''}" spellcheck="false">`;
+  tb.innerHTML='<tr><th>Block</th><th>Größe</th><th>Masse kg</th><th>CPU</th><th>Strom kW</th><th>Wert</th></tr>'+TYPES.filter(t=>G[t.id]).map(t=>G[t.id].map((e,i)=>{
+    const id=gk+'|'+t.id+'|'+i,st=entry(gk,t.id,i),o=OV[id]||{},vl=VAL[t.id];
+    return `<tr><td>${i?'':t.n}</td><td>${e[0].replace(/x/g,'×')}</td><td>${inp(id,'m',st.m,o.m!=null)}</td><td>${inp(id,'cpu',st.cpu,o.cpu!=null)}</td><td>${inp(id,'e',st.e,o.e!=null)}</td><td>${vl?inp(id,'val',st.val,o.val!=null)+' '+vl[2]:''}</td></tr>`}).join('')).join('');
+  tb.querySelectorAll('input').forEach(el=>el.onchange=()=>{const id=el.dataset.k,f=el.dataset.f,[g,t,i]=id.split('|'),e=STATS[g][t][+i];
+    const def={m:e[1],cpu:e[2],e:e[3],val:e[4]||0}[f],v=parseFloat(el.value.replace(/[\s\u00a0\u202f]/g,'').replace(',','.'));
+    const o=OV[id]||{};if(!isFinite(v)||v===def)delete o[f];else o[f]=Math.max(0,v);if(Object.keys(o).length)OV[id]=o;else delete OV[id];
+    saveOV();renderStats();updateInfo();$('#statMsg').textContent='Gespeichert.'})}
+const openStats=()=>{$('#statGrp').value=S.cls==='HV'?'hv':CLASSES[S.cls].grp;renderStats();$('#statMsg').textContent='';openModal('statModal')};
+$('#statBtn').onclick=openStats;$('#statBtn2').onclick=openStats;$('#statGrp').onchange=renderStats;
+$('#statReset').onclick=()=>{OV=np();saveOV();renderStats();updateInfo();$('#statMsg').textContent='Alle Werte wieder wie in der Blockliste.'};
 
 /* ---------- Bestehenden Block ändern ---------- */
 const HULLS=TYPES.filter(t=>t.hull);
