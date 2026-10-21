@@ -582,12 +582,12 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
 
 <div class="sim" id="sim" hidden role="application" aria-label="Probeflug">
   <canvas id="simCv"></canvas>
-  <div class="simtop"><button id="simDamp" aria-pressed="true">Dämpfer an</button><button id="simReset">Neustart</button><button id="simCamB">Kamera</button><button id="simClose" aria-label="Probeflug beenden">✕ Ende</button></div>
+  <div class="simtop"><button id="simDamp" aria-pressed="true">Dämpfer an</button><button id="simReset">Neustart</button><button id="simPilot" aria-pressed="false">Pilotensicht</button><button id="simCamB">Kamera</button><button id="simClose" aria-label="Probeflug beenden">✕ Ende</button></div>
   <div class="simbtns l" id="simRoll"><button data-hold="rollL" aria-label="Rollen links">⟲</button><button data-hold="rollR" aria-label="Rollen rechts">⟳</button></div>
   <div class="simbtns r" id="simVert"><button data-hold="up">▲ Hoch</button><button data-hold="down">▼ Runter</button></div>
   <div class="joy l" id="joyL"><b>Schub</b><i></i></div>
   <div class="joy r" id="joyR"><b>Lenken</b><i></i></div>
-  <p class="simhelp"><span class="kb">W/S vor/zurück · A/D seitwärts · Leertaste/C hoch/runter · Pfeile oder Maus ziehen: lenken · Q/E rollen · Z Dämpfer · Esc Ende<br></span>Flieg durch die orangen Ringe!</p>
+  <p class="simhelp"><span class="kb">W/S vor/zurück · A/D seitwärts · Leertaste/C hoch/runter · Pfeile oder Maus ziehen: lenken · Q/E rollen · Z Dämpfer · V Pilotensicht · Esc Ende<br></span>Flieg durch die orangen Ringe!</p>
 </div>
 
 <div id="toast" role="status" aria-live="polite"></div>
@@ -1705,7 +1705,7 @@ $('#statReset').onclick=()=>{OV=np();saveOV();renderStats();updateInfo();$('#sta
 
 /* ---------- Probeflug: das Schiff selbst fliegen ----------
    Lokale Achsen wie im Raster: +x rechts, +y oben, −z vorne (Bug). Werte aus flyCalc (Schub je Richtung, CPU, Schwerkraft, RCS). */
-const SIM={on:false,keys:new Set(),hold:Object.create(null),joyL:[0,0],joyR:[0,0],drag:null,damp:true,cam:0};
+const SIM={on:false,keys:new Set(),hold:Object.create(null),joyL:[0,0],joyR:[0,0],drag:null,damp:true,cam:0,pilot:false};
 const add3=(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]],scl=(a,s)=>[a[0]*s,a[1]*s,a[2]*s];
 const mtv=(M,v)=>[0,1,2].map(i=>M[0][i]*v[0]+M[1][i]*v[1]+M[2][i]*v[2]);
 function rotM(ax,ang){const [x,y,z]=ax,c=Math.cos(ang),s=Math.sin(ang),t=1-c;
@@ -1724,7 +1724,12 @@ function simBuild(){
   /* Düsen für das Flammen-Leuchten */
   const noz=[];S.blocks.forEach((v,k)=>{if(!TM[v.t].dir)return;const [x,y,z]=P3(k),[w,h,l]=dims(v),pv=DIRS[v.d].v;
     const ctr=[x+w/2,y+h/2,z+l/2],half=[w/2,h/2,l/2];noz.push({d:v.d,p:toL([ctr[0]-pv[0]*half[0]-wx,ctr[1]-pv[1]*half[1]-wy,ctr[2]-pv[2]*half[2]-wz]),r:Math.min(w,h,l)*bs*.45})});
-  return {R,F,corners,size,noz}}
+  /* Pilotensicht: Augenpunkt im Cockpit (geschlossen vor offen), sonst oben am Bug */
+  let eye=null,ck=null;for(const t of ['cockpit','cockpitOpen'])if(!ck)S.blocks.forEach((v,k)=>{if(!ck&&v.t===t)ck=[k,v]});
+  if(ck){const [k,v]=ck,[x,y,z]=P3(k),[w,h,l]=dims(v),b=rotDims(rInv(v.r||0),[w,h,l]),R0=ROTS[v.r||0],off=[0,.22*b[1],.05*b[2]];
+    const ro=[0,1,2].map(i=>R0[i][0]*off[0]+R0[i][1]*off[1]+R0[i][2]*off[2]);eye=toL([x+w/2+ro[0]-wx,y+h/2+ro[1]-wy,z+l/2+ro[2]-wz])}
+  else eye=toL([(mn[0]+mx[0])/2-wx,mx[1]+.3-wy,mn[2]+.5-wz]);
+  return {R,F,corners,size,noz,eye,hasCk:!!ck}}
 function simReset(){const B=SIM.B,R=B.R,sz=B.size,space=R.g===0;
   SIM.M=[[1,0,0],[0,1,0],[0,0,1]];SIM.v=[0,0,0];SIM.w=[0,0,0];SIM.t=0;SIM.run=false;SIM.done=false;SIM.msg='';SIM.msgT=0;SIM.ring=0;
   const minY=Math.min(...B.corners.map(p=>p[1]));SIM.pos=[0,space?0:-minY+(R.cls==='HV'?1.5:0),0];SIM.camC=null;
@@ -1741,7 +1746,7 @@ function simOpen(){if(!S.blocks.size){toast('Noch keine Blöcke gesetzt');return
   if(S.cls==='BA'){toast('Basen können nicht fliegen');return}
   ['flyModal'].forEach(id=>{if(!$('#'+id).hidden)closeModal(id)});
   SIM.B=simBuild();const hv=SIM.B.R.cls==='HV';$('#simRoll').hidden=hv;$('#simVert').hidden=hv;
-  $('#sim').hidden=false;SIM.on=true;simReset();SIM.last=0;SIM.keys.clear();
+  $('#sim').hidden=false;SIM.on=true;simReset();SIM.last=0;SIM.keys.clear();simPilot(!!FLY.pilot);
   if(!SIM.stars){SIM.stars=[];for(let i=0;i<260;i++){const u=Math.random()*2-1,a=Math.random()*6.283,r=Math.sqrt(1-u*u);SIM.stars.push([r*Math.cos(a),u,r*Math.sin(a),Math.random()])}}
   requestAnimationFrame(simLoop)}
 function simClose(){SIM.on=false;$('#sim').hidden=true}
@@ -1793,10 +1798,12 @@ function simDraw(){const cv=$('#simCv'),dpr=Math.min(2,window.devicePixelRatio||
   if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr)}
   const x=cv.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);const B=SIM.B,R=B.R,M=SIM.M,P0=SIM.pos,space=R.g===0,D=B.size;
   /* Kamera folgt dem Schiff */
-  const far=SIM.cam?1.9:1.15,want=add3(P0,mv(M,[0,.38*D*far+1,1.05*D*far+3]));
-  SIM.camC=SIM.camC?add3(SIM.camC,scl(sub(want,SIM.camC),Math.min(1,SIM.dt*7))):want;
-  const C=SIM.camC,tgt=add3(P0,mv(M,[0,.12*D,-.6*D])),f=norm(sub(tgt,C)),upH=mv(M,[0,1,0]),r=norm(cross(f,upH)),u=cross(r,f);
-  const cam={C,f,r,u,F:(Math.min(W,H*1.25)/2)/Math.tan(32*Math.PI/180)};
+  const pilot=SIM.pilot;let C,f,r,u;
+  if(pilot){C=add3(P0,mv(M,B.eye));f=mv(M,[0,0,-1]);u=mv(M,[0,1,0]);r=cross(f,u);SIM.camC=null}
+  else{const far=SIM.cam?1.9:1.15,want=add3(P0,mv(M,[0,.38*D*far+1,1.05*D*far+3]));
+    SIM.camC=SIM.camC?add3(SIM.camC,scl(sub(want,SIM.camC),Math.min(1,SIM.dt*7))):want;
+    C=SIM.camC;const tgt=add3(P0,mv(M,[0,.12*D,-.6*D]));f=norm(sub(tgt,C));const upH=mv(M,[0,1,0]);r=norm(cross(f,upH));u=cross(r,f)}
+  const cam={C,f,r,u,F:(Math.min(W,H*1.25)/2)/Math.tan((pilot?40:32)*Math.PI/180)};
   if(space){x.fillStyle='#04060b';x.fillRect(0,0,W,H);for(const s of SIM.stars){const d=[s[0],s[1],s[2]],z=dot(d,f);if(z<=.05)continue;
       const sx=W/2+dot(d,r)/z*cam.F,sy=H/2-dot(d,u)/z*cam.F;if(sx<0||sy<0||sx>W||sy>H)continue;x.fillStyle=`rgba(255,255,255,${.35+s[3]*.6})`;x.fillRect(sx,sy,s[3]>.85?2:1.2,s[3]>.85?2:1.2)}}
   else{const gr=x.createLinearGradient(0,0,0,H);gr.addColorStop(0,'#3d6fa6');gr.addColorStop(1,'#bcd5e6');x.fillStyle=gr;x.fillRect(0,0,W,H);
@@ -1812,17 +1819,22 @@ function simDraw(){const cv=$('#simCv'),dpr=Math.min(2,window.devicePixelRatio||
   const ringPts=g=>{const a=norm(Math.abs(g.n[1])<.9?cross(g.n,[0,1,0]):cross(g.n,[1,0,0])),b=cross(g.n,a),o=[];for(let i=0;i<40;i++){const t=i/40*6.2832;o.push(add3(g.c,add3(scl(a,Math.cos(t)*g.r),scl(b,Math.sin(t)*g.r))))}return o};
   const drawRing=(g,i)=>{const pts=ringPts(g),segs=[];for(let j=0;j<40;j++)segs.push(...clipProj(cam,W,H,[pts[j],pts[(j+1)%40]],false));
     const nxt=i===SIM.ring;x.strokeStyle=nxt?'#f08a2e':'rgba(255,255,255,.45)';x.lineWidth=nxt?4:2;x.beginPath();segs.forEach(s=>{x.moveTo(...s[0]);x.lineTo(...s[1])});x.stroke()};
-  const dShip=dot(sub(P0,C),f),rs=SIM.rings.map((g,i)=>({g,i,d:dot(sub(g.c,C),f)})).filter(o=>o.i>=SIM.ring);
+  const dShip=pilot?-1e9:dot(sub(P0,C),f),rs=SIM.rings.map((g,i)=>({g,i,d:dot(sub(g.c,C),f)})).filter(o=>o.i>=SIM.ring);
   rs.filter(o=>o.d>=dShip).sort((a,b)=>b.d-a.d).forEach(o=>drawRing(o.g,o.i));
   /* Schiff */
   const wf=B.F.map(q=>({n:mv(M,q.n),pts:q.pts.map(p=>add3(P0,mv(M,p))),c:add3(P0,mv(M,q.c)),rgb:q.rgb,a:q.a,noz:q.noz}));
   renderFaces(x,wf,cam,W,H,.5);
   const Pj=projector(cam,W,H);x.globalCompositeOperation='lighter';
-  for(const n of B.noz){if(!SIM.act||!SIM.act.has(n.d))continue;const w=add3(P0,mv(M,n.p)),pv=mv(M,DIRS[n.d].v);if(dot(pv,sub(C,w))>0)continue;
+  for(const n of B.noz){if(pilot||!SIM.act||!SIM.act.has(n.d))continue;const w=add3(P0,mv(M,n.p)),pv=mv(M,DIRS[n.d].v);if(dot(pv,sub(C,w))>0)continue;
     const q=Pj(w);if(!q)continue;const z=dot(sub(w,C),f),rad=Math.max(3,n.r/z*cam.F*1.4);const gg=x.createRadialGradient(q[0],q[1],0,q[0],q[1],rad);
     gg.addColorStop(0,'rgba(255,240,200,.95)');gg.addColorStop(.4,'rgba(255,150,40,.7)');gg.addColorStop(1,'rgba(255,90,0,0)');x.fillStyle=gg;x.beginPath();x.arc(q[0],q[1],rad,0,6.3);x.fill()}
   x.globalCompositeOperation='source-over';
   rs.filter(o=>o.d<dShip).sort((a,b)=>b.d-a.d).forEach(o=>drawRing(o.g,o.i));
+  if(pilot){x.strokeStyle='rgba(160,255,190,.85)';x.lineWidth=1.5;x.beginPath();
+    x.moveTo(W/2-14,H/2);x.lineTo(W/2-5,H/2);x.moveTo(W/2+5,H/2);x.lineTo(W/2+14,H/2);x.moveTo(W/2,H/2-14);x.lineTo(W/2,H/2-5);x.moveTo(W/2,H/2+5);x.lineTo(W/2,H/2+14);x.stroke();
+    if(Math.hypot(...SIM.v)>1){const q=Pj(add3(C,scl(norm(SIM.v),500)));if(q){x.beginPath();x.arc(q[0],q[1],6,0,6.3);x.moveTo(q[0]-14,q[1]);x.lineTo(q[0]-6,q[1]);x.moveTo(q[0]+6,q[1]);x.lineTo(q[0]+14,q[1]);x.moveTo(q[0],q[1]-6);x.lineTo(q[0],q[1]-11);x.stroke()}}
+    if(!space){const hd=norm([f[0],0,f[2]]),hr=[-hd[2],0,hd[0]],a=Pj(add3(C,add3(scl(hd,2000),scl(hr,-1500)))),b2=Pj(add3(C,add3(scl(hd,2000),scl(hr,1500))));
+      if(a&&b2&&Math.abs(f[1])<.97){x.strokeStyle='rgba(160,255,190,.45)';x.setLineDash([10,8]);x.beginPath();x.moveTo(...a);x.lineTo(...b2);x.stroke();x.setLineDash([])}}}
   /* Pfeil zum nächsten Ring */
   const nr=SIM.rings[SIM.ring];if(nr){const q=Pj(nr.c);const off=!q||q[0]<0||q[0]>W||q[1]<0||q[1]>H;
     if(off){const d=sub(nr.c,C),ang=Math.atan2(-dot(d,u),dot(d,r)),cx=W/2+Math.cos(ang)*Math.min(W,H)*.32,cy=H/2+Math.sin(ang)*Math.min(W,H)*.32;
@@ -1855,12 +1867,15 @@ document.querySelectorAll('[data-hold]').forEach(b=>{const k=b.dataset.hold,on=e
   const end=()=>{st=null;SIM.drag=null};cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end)})();
 const SIMKEYS=new Set(['KeyW','KeyA','KeyS','KeyD','KeyQ','KeyE','KeyC','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight']);
 window.addEventListener('keydown',e=>{if(!SIM.on)return;e.stopImmediatePropagation();
-  if(e.code==='Escape'){simClose();return}if(e.code==='KeyZ'){$('#simDamp').click();return}if(e.code==='KeyR'){simReset();return}
+  if(e.code==='Escape'){simClose();return}if(e.code==='KeyZ'){$('#simDamp').click();return}if(e.code==='KeyV'){simPilot(!SIM.pilot);return}if(e.code==='KeyR'){simReset();return}
   if(SIMKEYS.has(e.code)){SIM.keys.add(e.code);e.preventDefault()}},true);
 window.addEventListener('keyup',e=>{if(!SIM.on)return;e.stopImmediatePropagation();SIM.keys.delete(e.code);if(SIMKEYS.has(e.code))e.preventDefault()},true);
 window.addEventListener('blur',()=>{SIM.keys.clear()});
 $('#simDamp').onclick=()=>{SIM.damp=!SIM.damp;$('#simDamp').setAttribute('aria-pressed',SIM.damp);$('#simDamp').textContent=SIM.damp?'Dämpfer an':'Dämpfer aus';simMsg(SIM.damp?'Trägheitsdämpfer an – das Schiff bremst selbst':'Trägheitsdämpfer aus – das Schiff treibt weiter',2)};
-$('#simReset').onclick=simReset;$('#simClose').onclick=simClose;$('#simCamB').onclick=()=>{SIM.cam=SIM.cam?0:1};
+$('#simReset').onclick=simReset;$('#simClose').onclick=simClose;$('#simCamB').onclick=()=>{if(SIM.pilot)simPilot(false);else SIM.cam=SIM.cam?0:1};
+function simPilot(on){SIM.pilot=on;$('#simPilot').setAttribute('aria-pressed',on);$('#simPilot').textContent=on?'Außensicht':'Pilotensicht';FLY.pilot=on;saveFly();
+  if(on&&SIM.B&&!SIM.B.hasCk)simMsg('Kein Cockpit verbaut – Sicht vom Bug',2.5)}
+$('#simPilot').onclick=()=>simPilot(!SIM.pilot);
 $('#simBtn').onclick=simOpen;$('#simBtn2').onclick=simOpen;
 
 /* ---------- Bestehenden Block ändern ---------- */
