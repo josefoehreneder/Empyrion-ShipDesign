@@ -331,6 +331,12 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
         <p class="hint">Das Raster wächst und schrumpft gleichmäßig nach allen Seiten, die Mitte bleibt die Mitte. +/− ändert um einen Block je Seite.</p>
         <button class="btn" id="resize">Größe übernehmen</button>
       </div>
+      <div class="fld"><span>Spielversion – bestimmt Blockwerte, CPU und Regeln</span>
+        <div class="seg3 s2" role="group" aria-label="Spielversion">
+          <button data-game="re2" aria-pressed="true">Reforged Eden 2</button>
+          <button data-game="van" aria-pressed="false">Vanilla</button>
+        </div>
+      </div>
       <div class="fld"><span>Darstellung</span>
         <div class="seg3" role="group" aria-label="Darstellung">
           <button data-theme-set="auto" aria-pressed="true">Automatisch</button>
@@ -507,7 +513,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
       <div class="fld"><span>Umgebung</span><div class="seg3 s2" role="group" aria-label="Umgebung"><button data-env="planet" aria-pressed="true">Planet</button><button data-env="space" aria-pressed="false">Weltraum</button></div></div>
       <div class="inl" id="gRow"><label for="flyG">Schwerkraft</label><input type="number" id="flyG" min="0" max="5" step="0.05" value="1" style="width:5em"> g
         <button class="btn" data-gp="0.4">Mond 0,4</button><button class="btn" data-gp="1">1,0</button><button class="btn" data-gp="1.5">1,5</button></div>
-      <div class="fld"><span>CPU-Stufe (Tier) – Auto zählt die eingebauten Erweiterungen</span><div class="seg3 s5" role="group" aria-label="CPU-Stufe"><button data-tier="0">Auto</button><button data-tier="1">T1</button><button data-tier="2">T2</button><button data-tier="3">T3</button><button data-tier="4">T4</button></div></div>
+      <div class="fld" id="tierFld"><span>CPU-Stufe (Tier) – Auto zählt die eingebauten Erweiterungen</span><div class="seg3 s5" role="group" aria-label="CPU-Stufe"><button data-tier="0">Auto</button><button data-tier="1">T1</button><button data-tier="2">T2</button><button data-tier="3">T3</button><button data-tier="4">T4</button></div></div>
       <div class="inl"><label class="chk"><input type="checkbox" id="flyCpu" checked> CPU-Grenze anwenden</label></div>
       <div class="inl"><label for="flyV">Höchstgeschwindigkeit</label><input type="number" id="flyV" min="1" max="1000" step="1" style="width:5em"> m/s</div>
     </div>
@@ -528,8 +534,13 @@ kbd{font-family:var(--f-mono);font-size:.7rem;border:1px solid var(--line);borde
 <div class="modal" id="statModal" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="statTitle">
     <div class="shead"><h3 id="statTitle">Spielwerte</h3><button class="ib" data-close="statModal" aria-label="Schließen">✕</button></div>
-    <p class="msg">Werte je Block aus der Vanilla-Blockliste (BlocksConfig). Im Spiel stehen sie im Tooltip eines Blocks. Weicht deine Spielversion ab, trag den Wert hier ein; geänderte Felder sind orange umrandet. <b>Level</b> ist das Spielerlevel, ab dem der Block im Techtree freigeschaltet werden kann. <b>Wert</b> ist je nach Gerät Schub (kN), Drehmoment (kNm), Schwebekraft (kN) oder Leistung (kW).</p>
+    <p class="msg"><span id="statSrc">Werte je Block aus der Vanilla-Blockliste (BlocksConfig).</span> Im Spiel stehen sie im Tooltip eines Blocks. Weicht deine Spielversion ab, trag den Wert hier ein; geänderte Felder sind orange umrandet. <b>Level</b> ist das Spielerlevel, ab dem der Block im Techtree freigeschaltet werden kann. <b>Wert</b> ist je nach Gerät Schub (kN), Drehmoment (kNm), Schwebekraft (kN), Leistung (kW) oder bei CPU-Erweiterungen die zusätzliche CPU.</p>
     <div class="fld"><span>Gruppe</span><select id="statGrp"><option value="small">Klein · SV</option><option value="hv">Klein · HV (nur Abweichungen)</option><option value="large">Groß · CV / BA</option><option value="ba">Groß · nur BA (Abweichungen)</option></select></div>
+    <div class="fld" id="re2Imp"><span>Reforged Eden 2 aktualisieren</span>
+      <p class="hint">Die eingebauten RE2-Werte stammen aus einer älteren RE2-Version. Für die Werte deiner Version die Datei <b>BlocksConfig.ecf</b> laden – sie liegt im Steam-Ordner unter <code style="word-break:break-all">steamapps/workshop/content/383120/3143225812/Content/Configuration</code>.</p>
+      <div class="row"><button class="btn" id="re2Load">BlocksConfig.ecf laden</button><button class="btn" id="re2Def">Eingebaute RE2-Werte</button><input type="file" id="re2File" accept=".ecf,.txt,text/plain" hidden></div>
+      <p class="msg" id="re2Msg" aria-live="polite"></p>
+    </div>
     <div class="sztable"><table id="statTable"></table></div>
     <div class="row"><button class="btn" id="statReset">Alle wie in der Blockliste</button><p class="msg" id="statMsg" aria-live="polite"></p></div>
   </div>
@@ -699,6 +710,23 @@ const EXTRA=[
   {id:'deco',n:'Dekoration',g:'Ausstattung',c:'#9a8a7a',k:'Dk',cls:ALL,small:[['1x1x1',115,0,0,0,1]],large:[['1x1x1',100,0,0,0,1]]},
   {id:'plant',n:'Zimmerpflanze',g:'Ausstattung',c:'#5f9a4a',k:'Pf',cls:['CV','BA'],large:[['1x1x1',7,0,0,0,1]]}];
 EXTRA.forEach(e=>{const {cls,small,hv,large,ba,...t}=e;TYPES.push(t)});
+/* Nur in Reforged Eden 2 (only:'re2'); Vanilla-Waffen gibt es dort nicht (only:'van') */
+[{id:'thrusterT3',n:'Schubdüse T3',g:'Antrieb',c:'#cf5a1e',k:'',dir:true},
+ {id:'jetT2',n:'Jet-Düse T2',g:'Antrieb',c:'#e98a30',k:'',dir:true},
+ {id:'jetT3',n:'Jet-Düse T3',g:'Antrieb',c:'#de7724',k:'',dir:true},
+ {id:'turbine',n:'Plasmaturbine',g:'Steuerung & Energie',c:'#c2473a',k:'PT'},
+ {id:'cpu5',n:'CPU-Erweiterung T5',g:'Steuerung & Energie',c:'#22547a',k:'T5'},
+ {id:'cpuAux',n:'CPU-Zusatzkern (Aux)',g:'Steuerung & Energie',c:'#4a8aa8',k:'Ax'},
+ {id:'cpuQ',n:'Quanten-CPU-Erweiterung',g:'Steuerung & Energie',c:'#6a5bb0',k:'Q'},
+ {id:'crew',n:'Crew-Spezialist (CPU)',g:'Steuerung & Energie',c:'#c98b5e',k:'Cr'},
+ {id:'shieldBoost',n:'Schild-Booster',g:'Waffen & Verteidigung',c:'#3aa9c4',k:'SB'},
+ {id:'r2wL',n:'Waffe leicht (T1, fest)',g:'Feste Waffen',c:'#c95454',k:'W1'},
+ {id:'r2wM',n:'Waffe mittel (T2, fest)',g:'Feste Waffen',c:'#b23f3f',k:'W2'},
+ {id:'r2wH',n:'Waffe schwer (T3, fest)',g:'Feste Waffen',c:'#8f2c2c',k:'W3'},
+ {id:'r2tL',n:'Geschützturm leicht (T1)',g:'Geschütztürme',c:'#a44040',k:'G1'},
+ {id:'r2tM',n:'Geschützturm mittel (T2)',g:'Geschütztürme',c:'#8c3232',k:'G2'},
+ {id:'r2tH',n:'Geschützturm schwer (T3)',g:'Geschütztürme',c:'#702626',k:'G3'}].forEach(t=>{t.only='re2';TYPES.push(t)});
+['wGatling','wRocket','wHoming','wRail','wPlasma','wPulse','wCvRocket','wCvPulse','tMinigun','tCannon','tRocket','tFlak','tPulse','tPlasma','tArty'].forEach(id=>{TYPES.find(t=>t.id===id).only='van'});
 /* Wo ein Block erlaubt ist (aus der Blockliste); fehlt ein Eintrag, ist er überall erlaubt */
 const np=o=>Object.assign(Object.create(null),o||{});
 const ALLOW=np({concrete:['BA'],solar:['BA'],cockpit:['CV','SV','HV'],rcs:['CV','SV','HV'],thruster:['CV','SV','HV'],hover:['HV'],warp:['CV','SV'],
@@ -708,6 +736,10 @@ const ALLOW=np({concrete:['BA'],solar:['BA'],cockpit:['CV','SV','HV'],rcs:['CV',
   tTool:['HV','CV'],tDrill:['HV','CV'],sentry:['CV','BA'],dSv:['SV'],dHv:['HV'],dHvL:['HV'],dHvT2:['HV'],dCv:['CV'],saw:['HV'],
   detector:['SV','HV','CV'],repair:['CV','BA'],teleporter:['CV','BA'],gravity:['CV','BA'],shield2:['CV','BA'],furnace:['BA'],decon:['BA']});
 EXTRA.forEach(e=>{if(e.cls.length<4)ALLOW[e.id]=e.cls});
+const VAN_ALLOW=np(ALLOW);
+/* Abweichende Regeln in Reforged Eden 2 (null = überall erlaubt) */
+const RE2_ALLOW={thrusterT2:['SV','HV','CV'],thrusterT3:['SV','HV','CV'],jetT2:['SV','HV'],jetT3:['SV','HV'],turbine:['CV','BA'],crew:['CV','BA'],
+  r2wL:['SV','HV','CV'],r2wM:['SV','HV','CV'],r2wH:['SV','HV','CV'],clone:['BA','CV','HV'],shield2:null,gravity:null,csteel:['CV','BA'],xsteel:['CV','BA']};
 const allowed=(t,cls)=>!ALLOW[t]||ALLOW[t].includes(cls);
 /* Gerätegrößen aus der Blockliste, wie im Spiel: Breite × Höhe × Länge */
 const DEF_SZ={
@@ -721,6 +753,7 @@ const parseSizes=str=>{const out=[],re=/(\d+)\s*[x×*]\s*(\d+)\s*[x×*]\s*(\d+)/
 EXTRA.forEach(e=>{if(e.g==='Hülle')return;const sm=e.small||e.hv,lg=e.large;if(sm)DEF_SZ.small[e.id]=sm.map(x=>x[0]);if(lg)DEF_SZ.large[e.id]=lg.map(x=>x[0])});
 DEF_SZ.large.generator.push('6x2x2');DEF_SZ.large.fuel.push('2x2x1');DEF_SZ.large.constructor.push('1x1x1');DEF_SZ.large.solar=['1x1x1','1x2x1','3x1x2'];DEF_SZ.small.gear=['1x1x1','2x1x2'];
 for(const g in DEF_SZ){DEF_SZ[g]=np(DEF_SZ[g]);for(const t in DEF_SZ[g])DEF_SZ[g][t]=parseSizes(DEF_SZ[g][t].join(','))}
+const VAN_DEF_SZ={small:np(),large:np()};for(const g in DEF_SZ)for(const t in DEF_SZ[g])VAN_DEF_SZ[g][t]=DEF_SZ[g][t].map(a=>a.slice());
 const fmtSz=a=>a.join('×');
 const TM=Object.create(null);
 TYPES.forEach(t=>{const n=parseInt(t.c.slice(1),16);t.rgb=[n>>16,n>>8&255,n&255];t.hull=t.g==='Hülle';TM[t.id]=t});
@@ -852,7 +885,7 @@ const LS='empyrion-werftplaner-v1';
 function store(){try{return JSON.parse(localStorage.getItem(LS))||{designs:{}}}catch(e){return {designs:{}}}}
 function storeSet(o){try{localStorage.setItem(LS,JSON.stringify(o));return true}catch(e){return false}}
 function autosave(){clearTimeout(saveT);saveT=setTimeout(()=>{const o=store();o.last=serialize();o.layer=layer;storeSet(o)},400)}
-function saveSizes(){const o=store();o.sizes2=SZ;storeSet(o)}
+function saveSizes(){const o=store();o[GAME==='re2'?'sizesRE2':'sizes2']=SZ;storeSet(o)}
 if(IS_APP&&navigator.storage&&navigator.storage.persist){navigator.storage.persist().catch(()=>{})}
 const grpOf=()=>CLASSES[S.cls].grp;
 function sizeList(t,g){g=g||grpOf();const o=SZ[g]&&SZ[g][t];return o&&o.length?o:(DEF_SZ[g][t]||[[1,1,1]])} // je [B,H,L] wie im Spiel
@@ -879,7 +912,7 @@ function sample(){
   set(1,2,14,'thruster',{d:'r'}); set(7,2,14,'thruster',{d:'l'});
   set(3,0,6,'thruster',{d:'u'}); set(5,0,6,'thruster',{d:'u'}); set(3,0,12,'thruster',{d:'u'}); set(5,0,12,'thruster',{d:'u'}); set(4,4,12,'thruster',{d:'d'});
   set(2,0,5,'gear'); set(6,0,5,'gear'); set(2,0,13,'gear'); set(6,0,13,'gear');
-  set(1,2,4,'wGatling',{l:4}); set(7,2,4,'wGatling',{l:4});
+  {const wp=GAME==='re2'?'r2wL':'wGatling';set(1,2,4,wp,{l:4}); set(7,2,4,wp,{l:4})}
   S=prev;return s;
 }
 
@@ -940,7 +973,7 @@ function setView(v){shell.dataset.view=v;document.querySelectorAll('.tabs [data-
 function renderDrawer(){
   const L=$('#dlist');L.innerHTML='';const groups={};TYPES.forEach(t=>(groups[t.g]=groups[t.g]||[]).push(t));
   for(const g in groups){const d=document.createElement('div');d.className='grp';d.innerHTML=`<div class="lbl">${g}</div>`;
-    groups[g].forEach(t=>{if(t.old)return;const b=document.createElement('button');b.className='blk';b.dataset.id=t.id;
+    groups[g].forEach(t=>{if(t.old||!gameOk(t.id))return;const b=document.createElement('button');b.className='blk';b.dataset.id=t.id;
       b.innerHTML=`<span class="sw" style="background:${t.c};color:${ink(t.c)}">${t.dir?'↑':t.k}</span><span class="nm">${t.n}</span><span class="tagsz"></span>`;
       b.onclick=()=>{cur=t.id;if(t.hull)lastHull=t.id;if(tool!=='paint'&&tool!=='pan')setTool('paint');syncUI();
         if(t.hull)openModal('shapeModal');else if(t.dir)openModal('dirModal');else if(sizeList(t.id).length>1)openModal('sizeModal');else{closeDrawer();toast(t.n+' gewählt')}};
@@ -1135,7 +1168,8 @@ function sceneFaces(){
    Jede Form wird in einem Grundrahmen gebaut: Breite W (x), Höhe H (y), Länge L (z), vorne bei z=0, hinten (Düsenaustritt) bei z=L.
    Danach wird sie in die echte Lage gedreht. Teile sind konvexe Körper (Hülle aus Punkten). */
 const MESH=new Map(),C_MET=[152,160,170],C_DRK=[44,48,55],C_GLASS=[125,195,230];
-const KIND={thruster:'thr',thrusterT2:'thr',jet:'jet',wGatling:'gat',weapon:'gat',wRail:'rail',wPlasma:'plasma',wPulse:'laser',wCvPulse:'laser',
+const KIND={thruster:'thr',thrusterT2:'thr',thrusterT3:'thr',jet:'jet',jetT2:'jet',jetT3:'jet',r2wL:'gat',r2wM:'rail',r2wH:'plasma',r2tL:'tur',r2tM:'turL',r2tH:'turA',
+  turbine:'gen',cpu5:'cpu',cpuAux:'cpu',cpuQ:'cpu',crew:'pod',shieldBoost:'shield',wGatling:'gat',weapon:'gat',wRail:'rail',wPlasma:'plasma',wPulse:'laser',wCvPulse:'laser',
   wRocket:'rocket',wHoming:'rocket',wCvRocket:'rocket',tMinigun:'tur',tCannon:'turC',tFlak:'tur',turret:'tur',sentry:'tur',tRocket:'turR',tPulse:'turL',tPlasma:'turL',
   tArty:'turA',tTool:'turT',tDrill:'turT',dSv:'drill',dHv:'drill',dHvL:'drill',dHvT2:'drill',dCv:'drill',drill:'drill',saw:'saw',
   fuel:'tank',o2:'tank',pentaxid:'tank',generator:'gen',cockpit:'cockpit',hover:'hover',hoverBoost:'hover',rcs:'rcs',rcsT2:'rcs',gear:'gear',
@@ -1297,7 +1331,7 @@ function updateInfo(){
   else{
     c('core')===0?add('err','Kein Kern – ohne Kern lässt sich das Design nicht aktivieren.'):c('core')>1?add('err',`${c('core')} Kerne verbaut – erlaubt ist genau einer.`):add('ok','Kern vorhanden');
     if(cls!=='BA') c('cockpit')?add('ok','Cockpit vorhanden'):add('err','Kein Cockpit – das Schiff ist nicht steuerbar.');
-    c('generator')?add('ok','Generator vorhanden'):add('err','Kein Generator – keine Energie für Geräte.');
+    (c('generator')||c('turbine'))?add('ok','Generator vorhanden'):add('err','Kein Generator – keine Energie für Geräte.');
     c('fuel')?add('ok','Treibstofftank vorhanden'):add('err','Kein Treibstofftank – der Generator läuft nicht.');
     if(cls==='SV'||cls==='CV'){
       const miss=DORDER.filter(d=>!A.th[d]);
@@ -1308,14 +1342,22 @@ function updateInfo(){
       c('hover')?add('ok','Schwebetriebwerk vorhanden'):add('err','Kein Schwebetriebwerk – das HV hebt nicht ab.');
       (A.th.f&&A.th.b)?add('ok','Schub vorwärts und rückwärts'):add('warn','Für Fahrt braucht das HV Schubdüsen vorwärts und rückwärts.');
     }
-    if(cls==='BA'&&(c('thruster')||c('thrusterT2')||c('jet')||c('rcs')||c('hover')||c('warp'))) add('warn','Basen bewegen sich nicht – Antriebe sind hier überflüssig.');
+    if(cls==='BA'&&(TYPES.some(t=>t.dir&&c(t.id))||c('rcs')||c('hover')||c('warp'))) add('warn','Basen bewegen sich nicht – Antriebe sind hier überflüssig.');
     if(cls==='CV'&&!c('warp')) add('info','Kein Warpantrieb – Reisen in andere Systeme ist so nicht möglich.');
     if((cls==='CV'||cls==='BA')&&!c('o2')) add('info','Kein Sauerstofftank – drinnen gibt es keine Atemluft.');
     if(cls==='SV'&&!c('gear')) add('info','Keine Landebeine eingeplant.');
     TYPES.forEach(t=>{const n=c(t.id);if(n&&!allowed(t.id,cls))add('err',`${t.n} ist bei ${cls} nicht erlaubt (${n}×) – nur ${ALLOW[t.id].join(', ')}.`)});
     if(cls==='CV'&&c('weapon'))add('warn','Feste Waffen sind bei CV nur als Artillerie möglich.');
     if(cls==='SV'&&c('turret'))add('warn','Geschütztürme sind bei SV stark eingeschränkt.');
-    {const n={2:c('cpu2'),3:c('cpu3'),4:c('cpu4')};let top=1;
+    if(GAME==='re2'){const R=flyCalc(),sm=cls==='SV'||cls==='HV'?'Small':'Large',W=[['L','leicht','Light'],['M','mittel','Medium'],['H','schwer','Heavy']];
+      const parts=W.map(([k,n,g])=>{const have=c('r2w'+k)+c('r2t'+k),mx=RE2_GROUPS[g+'Weapons'+sm];if(have>mx)add('err',`${have} Waffen der Stufe ${n} – in RE2 sind bei ${cls} höchstens ${mx} erlaubt (fest und Türme zusammen).`);return `${n} ${have}/${mx}`});
+      if(W.some(([k])=>c('r2w'+k)+c('r2t'+k)))add('ok','Waffen je Stufe: '+parts.join(' · '));
+      const vw=TYPES.filter(t=>t.only==='van'&&c(t.id));if(vw.length)add('warn','Vanilla-Waffen ('+vw.map(t=>t.n.replace(/ \(.*/,'')).join(', ')+') gibt es in RE2 so nicht – durch „Waffe leicht/mittel/schwer“ oder „Geschützturm …“ ersetzen.');
+      TYPES.forEach(t=>{const n=c(t.id),L=n&&statList(cls,t.id),mx=L&&L[1][0][6];if(mx&&n>mx&&t.id!=='core')add(VAL[t.id]&&VAL[t.id][0]==='cpuOut'?'warn':'err',`${n}× ${t.n} – erlaubt ${mx===1?'ist nur einer':'sind höchstens '+mx}${VAL[t.id]&&VAL[t.id][0]==='cpuOut'?', mehr bringen keine CPU':''}.`)});
+      if(c('shield')+c('shield2')>1)add('err','Mehr als ein Schildgenerator – in RE2 zählt nur einer.');
+      R.cpuParts.length?add('ok',`CPU-Grenze ${nf(R.lim,0)} (Kern ${nf(R.cpuBase,0)} + Erweiterungen ${nf(R.lim-R.cpuBase,0)})`):add('info',`CPU-Grenze ${nf(R.lim,0)} nur vom Kern – CPU-Erweiterungen erhöhen sie.`);
+      if(R.cpu>R.lim)add('warn',`CPU-Verbrauch ${nf(R.cpu,0)} über der Grenze von ${nf(R.lim,0)} – Schub und Konstruktoren werden langsamer.`)}
+    else{const n={2:c('cpu2'),3:c('cpu3'),4:c('cpu4')};let top=1;
       [2,3,4].forEach(k=>{const need=EXT_NEED[k];if(!n[k])return;
         if(n[k]>need)add('err',`${n[k]} CPU-Erweiterungen T${k} – erlaubt sind höchstens ${need}.`);
         else if(n[k]<need)add('warn',`${n[k]} von ${need} CPU-Erweiterungen T${k} – Stufe T${k} zählt erst, wenn alle ${need} eingebaut sind.`);
@@ -1323,6 +1365,7 @@ function updateInfo(){
       const R=flyCalc(),lim=CPU_TIER[cls][top-1];
       if(top>1)add('ok',`CPU-Stufe T${top} aktiv (${nf(lim,0)} CPU)`);
       if(R.cpu>lim)add('warn',`CPU-Verbrauch ${nf(R.cpu,0)} über der Grenze von T${top} (${nf(lim,0)}) – Schub und Konstruktoren werden langsamer.${top<4?' Mehr CPU-Erweiterungen helfen.':''}`)}
+    if(GAME==='van'){const nv=TYPES.filter(t=>t.only==='re2'&&c(t.id));if(nv.length)add('warn','Nur in Reforged Eden 2: '+nv.map(t=>t.n).join(', ')+' – in Vanilla gibt es diese Bauteile nicht.')}
     {const LV=levelCalc(),top=LV.list.filter(o=>o.l>1).slice(0,4);
       add('info',`Spielerlevel für dieses Design: <b>mindestens ${LV.max}</b>`+(top.length?' – '+top.map(o=>`${lvlName(o)} L${o.l}`).join(', '):' (nur Grundblöcke)'));
       const old=['weapon','turret','drill'].filter(t=>c(t));if(old.length)add('info','Allgemeine Blöcke aus älteren Designs ('+old.map(t=>TM[t].n.replace(/ \(.*/,'')).join(', ')+') – für genaue Werte und Level durch die genauen Waffen, Türme oder Bohrer ersetzen.')}
@@ -1386,6 +1429,36 @@ const STATS={
 EXTRA.forEach(e=>{['small','hv','large','ba'].forEach(g=>{if(e[g])STATS[g][e.id]=e[g]})});
 STATS.large.generator.push(['6x2x2',37355,22500,0,180000,15]);STATS.large.fuel.push(['2x2x1',3570,1500,1,0,15]);STATS.large.constructor.push(['1x1x1',1660,10000,300,0,3]);
 STATS.large.solar.push(['1x2x1',2050,50,0,5000,1],['3x1x2',350,20,0,0,1]);STATS.small.gear.push(['2x1x2',240,0,1,0,10]);
+const VAN_STATS=JSON.parse(JSON.stringify(STATS)),VAN_VAL=Object.assign({},VAL);
+
+/* ---------- Reforged Eden 2 ----------
+   Werte aus der RE2-Blockliste (BlocksConfig.ecf, Workshop 3143225812), gleiche Form wie oben, 7. Feld = MaxCount.
+   Waffen: RE2 teilt sie in Stufen (leicht/mittel/schwer) mit gemeinsamer Obergrenze; Werte je Stufe sind Mittelwerte (RE2 gleicht CPU je Stufe an).
+   Kern-„Wert“ = CPU-Grundwert ohne Erweiterungen (anpassbar). Schwebekraft steht nicht in der Blockliste – Vanilla-Wert. */
+const RE2_STATS={"small":{"steel":[["1x1x1",16,0,0,0,1]],"hsteel":[["1x1x1",32,0,0,0,1]],"window":[["1x1x1",8,0,0,0,1]],"truss":[["1x1x1",4,0,0,0,1]],"core":[["1x1x1",140,0,10,6000,1,1]],"cockpit":[["1x2x3",240,0,10,0,1],["3x2x4",350,25,10,0,1],["3x3x5",445,25,10,0,1]],"generator":[["1x1x1",250,500,0,750,1],["1x2x1",500,1000,0,1750,7],["3x1x1",750,2000,0,4000,15]],"fuel":[["1x1x1",50,25,1,0,1],["1x1x2",100,25,1,0,5]],"o2":[["1x1x1",30,10,5,0,1]],"thruster":[["1x1x1",80,38,60,60,5],["1x1x2",160,75,120,135,7],["1x1x3",240,112,240,210,10]],"thrusterT2":[["1x1x1",120,57,120,120,7],["1x1x2",240,112,240,270,10],["1x1x3",360,168,480,420,12]],"thrusterT3":[["1x1x1",160,76,180,180,10],["1x1x2",320,150,360,405,15],["1x1x3",480,224,750,630,15]],"jet":[["1x1x3",200,125,210,180,12],["2x2x5",1000,450,835,900,15],["3x3x7",3000,938,2000,2700,15],["3x3x10",4000,1156,2330,3600,15],["3x3x13",5330,1406,2660,4800,15]],"jetT2":[["1x1x3",300,188,420,360,15],["2x2x5",1500,675,1670,1800,20],["3x3x7",4500,1407,4000,5400,20],["3x3x10",6000,1734,4660,7200,20],["3x3x13",8000,2109,5320,9600,20]],"jetT3":[["1x1x3",400,250,630,540,20],["2x2x5",2000,900,2505,2700,25],["3x3x7",6000,1876,6000,8100,25],["3x3x10",8000,2312,6990,10800,25],["3x3x13",10660,2812,7980,14400,25]],"rcs":[["1x1x1",48,300,200,300,5]],"cpu2":[["1x1x1",100,0,10,1500,7,2]],"cpu3":[["2x1x1",200,0,25,2000,12,2]],"cpu4":[["3x1x1",300,0,50,2500,20,2]],"cpu5":[["2x1x2",400,0,100,3000,25,2]],"cpuAux":[["2x1x2",400,0,100,1500,20,4]],"cpuQ":[["3x1x2",600,0,50,4000,25,2]],"warp":[["3x2x5",2500,750,150,0,12,1]],"pentaxid":[["1x1x2",150,200,0,0,10,1]],"cargo":[["1x1x1",8,1,1,0,1]],"cargoCtrl":[["1x1x1",24,25,5,0,3]],"cargoExt":[["1x1x1",10,1,1,0,5]],"harvest":[["1x1x1",24,25,5,0,3]],"ammoCtrl":[["1x1x1",24,25,5,0,3]],"ammo":[["1x1x1",100,25,1,0,1]],"constructor":[["1x1x3",150,300,750,0,7]],"food":[["1x1x1",24,5,5,0,3],["2x2x1",360,250,375,0,7]],"medstation":[["1x2x1",70,5,3,0,3],["2x2x1",80,100,35,0,12]],"door":[["1x1x1",42,0,1,0,1]],"light":[["1x1x1",0.2,0,1,0,1]],"gear":[["1x1x2",17,0,1,0,5],["2x1x2",24,0,1,0,10]],"shield":[["2x1x3",2000,1000,1000,0,15,1]],"shield2":[["2x1x3",4000,2000,2000,0,25]],"detector":[["1x1x1",100,100,15,0,5,1],["3x2x3",300,250,30,0,12,1],["5x3x5",900,1000,100,0,25,1]],"gravity":[["1x1x1",250,100,100,0,12],["2x1x2",750,200,200,0,12],["2x2x2",1000,250,250,0,12]],"spotlight":[["1x1x1",35,0,20,0,1,30]],"shieldBoost":[["1x1x1",200,500,125,0,15,4]],"r2wL":[["1x1x3",250,1000,75,0,5],["1x1x4",500,1000,75,0,10],["1x1x5",1750,1000,75,0,10]],"r2tL":[["3x1x3",1500,1000,100,0,10],["3x2x3",1750,1000,100,0,10]],"r2wM":[["1x1x3",908,2000,150,0,15],["1x1x6",2250,2000,188,0,15],["1x1x7",2500,2000,150,0,15]],"r2tM":[["3x1x3",2000,2000,200,0,15],["3x2x3",3500,2000,200,0,15]],"r2wH":[["1x1x10",3750,4000,300,0,25],["3x1x8",1250,4000,300,0,25],["2x2x10",1500,4000,300,0,25]]},"hv":{"core":[["1x1x1",140,0,10,5000,1,1]],"thruster":[["1x1x1",80,38,45,80,3],["1x1x2",160,75,90,200,5],["1x1x3",240,112,135,300,7]],"thrusterT2":[["1x1x1",120,57,90,160,5],["1x1x2",240,112,180,400,7],["1x1x3",360,168,270,600,12]],"thrusterT3":[["1x1x1",160,76,135,240,7],["1x1x2",320,150,270,600,10],["1x1x3",480,224,405,900,15]],"jet":[["1x1x3",200,125,150,350,12],["2x2x5",1000,450,660,1750,15]],"jetT2":[["1x1x3",300,188,300,700,15],["2x2x5",1500,675,1320,3500,20]],"jetT3":[["1x1x3",400,250,450,1050,20],["2x2x5",2000,900,1980,5250,25]],"rcs":[["1x1x1",48,250,100,320,1]],"hover":[["1x1x1",75,50,15,200,3],["2x1x2",300,150,50,800,7]],"hoverBoost":[["1x1x2",260,30,10,0,5]],"cpu2":[["1x1x1",100,0,10,1750,7,2]],"cpu3":[["2x1x1",200,0,25,2250,12,2]],"cpu4":[["3x1x1",300,0,50,2500,20,2]],"cpu5":[["2x1x2",400,0,100,3500,25,2]],"shield":[["2x1x3",2000,1000,1000,0,12,1]],"shield2":[["2x1x3",4000,2000,2000,0,20,1]],"constructor":[["1x1x3",250,300,500,0,5]],"detector":[["1x1x1",100,100,15,0,3,1],["3x2x3",300,250,30,0,12,1],["5x3x5",900,1000,100,0,25,1]],"clone":[["2x3x2",890,100,20,0,5]],"medstation":[["1x2x1",70,5,3,0,3],["2x2x1",80,100,35,0,12]],"r2wL":[["1x1x4",1500,1000,75,0,10],["1x1x5",1250,1000,75,0,10]],"r2tL":[["3x1x3",1000,1000,100,0,10],["3x2x3",1250,1000,100,0,10]],"r2wM":[["1x1x6",2250,2000,188,0,15],["1x1x7",2500,2000,150,0,15],["1x1x8",1500,2000,150,0,15]],"r2tM":[["3x1x3",2000,2000,200,0,15],["3x2x3",2500,2000,200,0,15]],"r2wH":[["1x1x10",3750,4000,300,0,25],["1x1x11",2250,4000,300,0,25],["2x2x10",1500,4000,300,0,25]],"r2tH":[["5x2x5",5000,3000,300,0,25],["5x4x5",6000,3000,300,0,25]]},"large":{"steel":[["1x1x1",1000,0,0,0,1]],"hsteel":[["1x1x1",2000,0,0,0,1]],"csteel":[["1x1x1",4000,0,0,0,1]],"xsteel":[["1x1x1",3000,0,0,0,1]],"wood":[["1x1x1",450,0,0,0,1]],"concrete":[["1x1x1",4000,0,0,0,1]],"truss":[["1x1x1",4,0,0,0,1]],"core":[["1x1x1",140,0,10,200000,1,1]],"cockpit":[["1x1x1",800,0,0,0,7]],"generator":[["2x1x1",5000,12500,0,5000,3],["3x1x1",15000,25000,0,25000,10],["6x2x2",120000,50000,0,100000,15]],"turbine":[["2x2x4",15000,10000,0,600,12,4],["3x3x6",40000,20000,0,1800,20,4]],"fuel":[["1x1x1",2000,100,1,0,3],["1x2x1",4000,100,1,0,10],["2x2x1",6000,100,1,0,15]],"o2":[["1x1x1",500,50,10,0,1],["1x2x1",800,50,5,0,10]],"solar":[["1x2x1",2050,2500,0,2000,1],["3x1x2",350,35,0,0,1,24]],"thruster":[["1x1x1",3000,800,700,2700,7],["1x1x2",6000,1600,1400,6750,10],["1x1x3",10500,2400,2030,10800,12],["2x2x4",52500,9600,11200,54000,15],["3x3x6",157500,24000,44100,189000,15]],"thrusterT2":[["1x1x1",4500,1200,1400,5400,10],["1x1x2",9000,2400,2800,13500,12],["1x1x3",15750,3600,4060,21600,15],["2x2x4",78750,14400,22400,108000,20],["3x3x6",236250,36000,88200,378000,20]],"thrusterT3":[["1x1x1",6000,1600,2100,8100,12],["1x1x2",12000,3200,4200,20250,15],["1x1x3",21000,4800,6090,32400,20],["2x2x4",105000,19200,33600,162000,25],["3x3x6",315000,48000,132300,567000,25]],"rcs":[["1x1x1",10000,5000,750,25000,7]],"rcsT2":[["1x1x1",20000,10000,1500,60000,15]],"cpu2":[["1x1x1",500,0,85,25000,10,2]],"cpu3":[["2x1x1",1000,0,165,50000,15,2]],"cpu4":[["3x1x1",1500,0,250,75000,20,2]],"cpu5":[["2x1x2",2000,0,375,100000,25,2]],"cpuAux":[["2x1x2",2000,0,375,50000,15,4]],"cpuQ":[["3x1x2",3000,0,330,125000,25,2]],"crew":[["1x1x1",120,0,0,2500,1,16]],"warp":[["3x2x5",48000,15000,250,0,12,1]],"pentaxid":[["1x2x1",2500,1000,0,0,10,1]],"cargo":[["1x1x1",125,10,1,0,1]],"cargoCtrl":[["1x1x1",625,100,35,0,5]],"cargoExt":[["1x1x1",500,5,1,0,7]],"harvest":[["1x1x1",625,100,40,0,12]],"ammoCtrl":[["1x1x1",625,100,50,0,5]],"ammo":[["1x1x1",100,25,1,0,1],["2x1x1",1975,50,1,0,3]],"constructor":[["1x1x1",1200,2500,750,0,3],["2x2x2",4800,5000,1500,0,5],["3x2x2",9600,15000,6000,0,20]],"food":[["1x1x1",150,25,10,0,1]],"medstation":[["1x1x1",595,0,3,0,3]],"clone":[["1x1x1",1000,0,20,0,1]],"door":[["1x1x1",295,0,1,0,1]],"doorArm":[["1x1x1",910,0,1,0,7]],"light":[["1x1x1",0.4,0,1,0,1]],"gear":[["1x1x2",1700,0,1,0,7]],"shield":[["3x3x3",25000,30000,17500,0,15,1]],"shield2":[["3x3x3",37500,45000,25000,0,20,1]],"shieldBoost":[["1x1x1",8000,10000,5000,0,10,8]],"detector":[["1x1x1",3520,5000,50,0,7,1],["3x2x3",3000,7500,150,0,15,1],["5x3x5",6000,12500,500,0,25,1]],"repair":[["1x1x1",39225,20000,41500,0,12,1]],"repair2":[["1x1x1",51770,30000,83300,0,20,1]],"repairCon":[["1x1x1",630,500,10,0,12,1]],"repairSt":[["1x2x1",1000,1000,25,0,10]],"teleporter":[["1x1x1",2500,10000,10000,0,15]],"gravity":[["1x1x1",2500,100,100,0,7],["2x1x2",7500,400,200,0,7],["2x2x2",10000,800,250,0,7]],"offline":[["2x2x2",7500,0,1,0,7,1]],"antenna":[["1x3x1",450,0,1,0,1]],"spotlight":[["1x1x1",35,0,20,0,1,30]],"r2wL":[["1x1x6",15000,10000,300,0,15],["1x1x7",15000,10000,300,0,15],["1x1x8",15000,10000,300,0,15]],"r2tL":[["3x1x3",11250,10000,350,0,20]],"r2wM":[["2x2x6",35000,20000,600,0,20],["3x1x8",35000,20000,600,0,20],["3x4x7",35000,20000,600,0,20]],"r2tM":[["3x1x3",20000,20000,700,0,20],["3x2x3",25000,20000,700,0,20],["5x2x5",35000,20000,700,0,20]],"r2wH":[["3x2x12",80000,40000,1200,0,25],["3x2x13",80000,40000,1200,0,25],["5x2x12",80000,40000,1200,0,25]],"r2tH":[["3x1x3",30000,30000,1225,0,20],["5x2x5",30000,30000,3000,0,25]]},"ba":{"core":[["1x1x1",140,0,10,80000,1,1]],"cpu2":[["1x1x1",500,0,85,20000,7,2]],"cpu3":[["2x1x1",1000,0,125,45000,12,2]],"cpu4":[["3x1x1",1500,0,165,65000,20,2]],"cpu5":[["2x1x2",2000,0,225,85000,25,2]],"shield":[["3x3x3",25000,30000,22500,0,15,1]],"shield2":[["3x3x3",37500,45000,35000,0,25,1]],"repair":[["1x1x1",22600,30000,20800,0,12,1]],"repair2":[["1x1x1",34556,30000,33300,0,20,1]],"teleporter":[["1x1x1",3200,10000,10400,0,15]],"furnace":[["3x3x3",12000,20000,5000,0,12]],"r2tL":[["3x1x3",10000,10000,250,0,20],["3x2x3",12500,10000,250,0,10]],"r2tM":[["3x1x3",20000,20000,700,0,20],["3x2x3",25000,20000,500,0,15],["5x2x5",35000,20000,500,0,15]],"r2tH":[["3x1x3",30000,30000,1225,0,20],["3x3x3",109700,40000,1000,0,25],["5x2x5",30000,30000,3000,0,25]]}};
+const RE2_MAP={"small":{"steel":[["HullSmallBlocks"],0,null,{}],"hsteel":[["HullArmoredSmallBlocks"],0,null,{}],"window":[["WindowSmallBlocks"],0,null,{}],"truss":[["TrussSmallBlocks"],0,null,{}],"core":[["Core"],0,null,{"Core":6000}],"cockpit":[["CockpitOpen2SV","CockpitSV05New","CockpitSV01"],0,null,{}],"generator":[["GeneratorSVSmall","GeneratorSV","GeneratorSVT2"],0,"out",{}],"fuel":[["FuelTankSVSmall","FuelTankSV"],0,null,{}],"o2":[["OxygenTankSV"],0,null,{}],"thruster":[["ThrusterSVDirectional","ThrusterSVRoundNormal","ThrusterSVRoundLarge"],1,"thr",{}],"thrusterT2":[["ThrusterSVSmallT2","ThrusterSVRoundNormalT2","ThrusterSVRoundLargeT2"],1,"thr",{}],"thrusterT3":[["ThrusterSVSmallT3","ThrusterSVMediumT3","ThrusterSVLargeT3"],1,"thr",{}],"jet":[["ThrusterJetRound1x3x1","ThrusterJetRound2x5x2","ThrusterJetRound3x7x3","ThrusterJetRound3x10x3","ThrusterJetRound3x13x3"],1,"thr",{}],"jetT2":[["ThrusterSV1x3JetT2","ThrusterSV2x5JetT2","ThrusterSV3x7JetT2","ThrusterSV3x10JetT2","ThrusterSV3x13JetT2"],1,"thr",{}],"jetT3":[["ThrusterSV1x3JetT3","ThrusterSV2x5JetT3","ThrusterSV3x7JetT3","ThrusterSV3x10JetT3","ThrusterSV3x13JetT3"],1,"thr",{}],"rcs":[["RCSBlockSV"],0,"tq",{}],"cpu2":[["CPUExtenderSVT2"],0,"cpuOut",{}],"cpu3":[["CPUExtenderSVT3"],0,"cpuOut",{}],"cpu4":[["CPUExtenderSVT4R"],0,"cpuOut",{}],"cpu5":[["CPUExtenderSVT5"],0,"cpuOut",{}],"cpuAux":[["Eden_CPUExtenderAuxSV"],0,"cpuOut",{}],"cpuQ":[["CPUExtenderQuantumSmall"],0,"cpuOut",{}],"warp":[["WarpDriveSV"],0,null,{}],"pentaxid":[["PentaxidTankSV"],0,null,{}],"cargo":[["ContainerMS01Small"],0,null,{}],"cargoCtrl":[["ContainerControllerSmall"],0,null,{}],"cargoExt":[["ContainerExtensionSmall"],0,null,{}],"harvest":[["ContainerHarvestControllerSmall"],0,null,{}],"ammoCtrl":[["ContainerAmmoControllerSmall"],0,null,{}],"ammo":[["ContainerAmmoSmall"],0,null,{}],"constructor":[["ConstructorSV"],0,null,{}],"food":[["FridgeSV","FoodProcessorSmall"],0,null,{}],"medstation":[["OxygenStationSV","MedicStationHV"],0,null,{}],"door":[["DoorBlocksSV"],0,null,{}],"light":[["LightSS01"],0,null,{}],"gear":[["LandinggearBlocksSV","LandinggearBlocksHeavySV"],0,null,{}],"shield":[["ShieldGeneratorSV"],0,null,{}],"shield2":[["ShieldGeneratorSVT2"],0,null,{}],"detector":[["DetectorSVT1","DetectorSVT2","DetectorSVT3"],0,null,{}],"gravity":[["GravityGeneratorSVHVVerySmall","GravityGeneratorSVHVMedium","GravityGeneratorSVHVLarge"],0,null,{}],"spotlight":[["SpotlightBlocks"],0,null,{}],"shieldBoost":[["ShieldBoosterSmallT1Blocks"],0,null,{}]},"hv":{"core":[["Core"],0,null,{"Core":5000}],"thruster":[["ThrusterGVDirectional","ThrusterGVRoundNormal","ThrusterGVRoundLarge"],1,"thr",{}],"thrusterT2":[["ThrusterGVSmallT2","ThrusterGVRoundNormalT2","ThrusterGVRoundLargeT2"],1,"thr",{}],"thrusterT3":[["ThrusterGVSmallT3","ThrusterGVMediumT3","ThrusterGVLargeT3"],1,"thr",{}],"jet":[["ThrusterGVJetRound1x3x1","ThrusterGV2x5JetT1"],1,"thr",{}],"jetT2":[["ThrusterGV1x3JetT2","ThrusterGV2x5JetT2"],1,"thr",{}],"jetT3":[["ThrusterGV1x3JetT3","ThrusterGV2x5JetT3"],1,"thr",{}],"rcs":[["RCSBlockGV"],0,"tq",{}],"hoverBoost":[["HoverBooster"],0,null,{}],"cpu2":[["CPUExtenderHVT2"],0,"cpuOut",{}],"cpu3":[["CPUExtenderHVT3"],0,"cpuOut",{}],"cpu4":[["CPUExtenderHVT4R"],0,"cpuOut",{}],"cpu5":[["CPUExtenderHVT5"],0,"cpuOut",{}],"shield":[["ShieldGeneratorHV"],0,null,{}],"shield2":[["ShieldGeneratorHVT2"],0,null,{}],"constructor":[["ConstructorHV"],0,null,{}],"detector":[["DetectorHVT1","DetectorSVT2","DetectorSVT3"],0,null,{}],"clone":[["CloneChamberHV"],0,null,{}],"medstation":[["OxygenStationSV","MedicStationHV"],0,null,{}]},"large":{"steel":[["HullLargeBlocks"],0,null,{}],"hsteel":[["HullArmoredLargeBlocks"],0,null,{}],"csteel":[["HullCombatLargeBlocks"],0,null,{}],"xsteel":[["AlienBlocks"],0,null,{}],"wood":[["WoodBlocks"],0,null,{}],"concrete":[["ConcreteBlocks"],0,null,{}],"truss":[["TrussCube"],0,null,{}],"core":[["Core"],0,null,{"Core":200000}],"cockpit":[["CockpitBlocksCV"],0,null,{}],"generator":[["GeneratorBA","GeneratorMS","GeneratorMST2"],0,"out",{}],"turbine":[["PlasmaTurbineT1","PlasmaTurbineT2"],0,"out",{}],"fuel":[["FuelTankMSSmall","FuelTankMSLarge","FuelTankMSLargeT2"],0,null,{}],"o2":[["OxygenTankSmallMS","OxygenTankMS"],0,null,{}],"solar":[["SolarGenerator","SolarPanelSmallBlocks"],0,"out",{}],"thruster":[["ThrusterMSDirectional","ThrusterMSRoundNormal","ThrusterMSRoundLarge","ThrusterMSRoundNormal2x2","ThrusterMSRoundNormal3x3"],1,"thr",{}],"thrusterT2":[["ThrusterMSSmallT2","ThrusterMSMediumT2Blocks","ThrusterMSRoundLargeT2","ThrusterMSAdvancedT2Blocks","ThrusterMSDriveT2Blocks"],1,"thr",{}],"thrusterT3":[["ThrusterMSSmallT3","ThrusterMSMediumT3Blocks","ThrusterMSRoundLargeT3","ThrusterMSAdvancedT3Blocks","ThrusterMSDriveT3Blocks"],1,"thr",{}],"rcs":[["RCSBlockMS"],0,"tq",{}],"rcsT2":[["RCSBlockMS_T2"],0,"tq",{}],"cpu2":[["CPUExtenderCVT2"],0,"cpuOut",{}],"cpu3":[["CPUExtenderCVT3"],0,"cpuOut",{}],"cpu4":[["CPUExtenderCVT4R"],0,"cpuOut",{}],"cpu5":[["CPUExtenderCVT5"],0,"cpuOut",{}],"cpuAux":[["Eden_CPUExtenderAuxCV"],0,"cpuOut",{}],"cpuQ":[["CPUExtenderQuantumLarge"],0,"cpuOut",{}],"crew":[["CrewEngineer01"],0,"cpuOut",{}],"warp":[["WarpDrive"],0,null,{}],"pentaxid":[["PentaxidTank"],0,null,{}],"cargo":[["ContainerMS01Large"],0,null,{}],"cargoCtrl":[["ContainerControllerLarge"],0,null,{}],"cargoExt":[["ContainerExtensionLarge"],0,null,{}],"harvest":[["ContainerHarvestControllerLarge"],0,null,{}],"ammoCtrl":[["ContainerAmmoControllerLarge"],0,null,{}],"ammo":[["ContainerAmmoSmall","ContainerAmmoLarge"],0,null,{}],"constructor":[["ConstructorT0","ConstructorT1V2","ConstructorT3"],0,null,{}],"food":[["FridgeMS","FoodProcessorV2"],0,null,{}],"medstation":[["OxygenStation"],0,null,{}],"clone":[["CloneChamber"],0,null,{}],"door":[["DoorBlocks"],0,null,{}],"doorArm":[["DoorArmoredBlocks"],0,null,{}],"light":[["LightLargeBlocks"],0,null,{}],"gear":[["LandinggearBlocksCV"],0,null,{}],"shield":[["ShieldGeneratorCV"],0,null,{}],"shield2":[["ShieldGeneratorCVT2"],0,null,{}],"shieldBoost":[["ShieldBoosterLargeT1Blocks","ShieldBoosterLargeT2Blocks","ShieldBoosterLargeT3Blocks"],0,null,{}],"detector":[["DetectorCV","DetectorCVT2","DetectorCVT3"],0,null,{}],"repair":[["RepairBayCV"],0,null,{}],"repair2":[["RepairBayCVT2"],0,null,{}],"repairCon":[["RepairBayConsole"],0,null,{}],"repairSt":[["RepairStation"],0,null,{}],"teleporter":[["TeleporterCV"],0,null,{}],"gravity":[["GravityGeneratorBACVVerySmall","GravityGeneratorBACVMedium","GravityGeneratorMS"],0,null,{}],"offline":[["OfflineProtector"],0,null,{}],"antenna":[["AntennaBlocks"],0,null,{}],"spotlight":[["SpotlightBlocks"],0,null,{}]},"ba":{"core":[["Core"],0,null,{"Core":80000}],"cpu2":[["CPUExtenderBAT2"],0,"cpuOut",{}],"cpu3":[["CPUExtenderBAT3"],0,"cpuOut",{}],"cpu4":[["CPUExtenderBAT4R"],0,"cpuOut",{}],"cpu5":[["CPUExtenderBAT5"],0,"cpuOut",{}],"shield":[["ShieldGeneratorBA"],0,null,{}],"shield2":[["ShieldGeneratorBAT2"],0,null,{}],"repair":[["RepairBayBA"],0,null,{}],"repair2":[["RepairBayBAT2"],0,null,{}],"teleporter":[["TeleporterBA"],0,null,{}],"furnace":[["Furnace"],0,null,{}]}};
+const RE2_GROUPS={"LightWeaponsSmall":8,"MediumWeaponsSmall":4,"HeavyWeaponsSmall":2,"LightWeaponsLarge":24,"MediumWeaponsLarge":12,"HeavyWeaponsLarge":6,"Crew":16,"Detector":1,"ShieldGenerator":1,"Eden_MaxWindTurbines":16,"Eden_MaxGeoPower":4,"Eden_ExpWeaponsLarge":2};
+const GAMES={re2:'Reforged Eden 2',van:'Vanilla'};
+let GAME='re2',RE2_CFG=null;
+try{const c=JSON.parse(localStorage.getItem('empyrion-werftplaner-re2cfg'));if(c&&c.stats)RE2_CFG=c}catch(e){}
+const RE2_VAL={thrusterT3:['thr','Schub','kN'],jetT2:['thr','Schub','kN'],jetT3:['thr','Schub','kN'],turbine:['out','Leistung','kW'],core:['base','CPU-Grundwert','CPU'],
+  cpu2:['cpuOut','CPU','CPU'],cpu3:['cpuOut','CPU','CPU'],cpu4:['cpuOut','CPU','CPU'],cpu5:['cpuOut','CPU','CPU'],cpuAux:['cpuOut','CPU','CPU'],cpuQ:['cpuOut','CPU','CPU'],crew:['cpuOut','CPU','CPU']};
+const fillObj=(o,src)=>{for(const k in o)delete o[k];Object.assign(o,src)};
+const gameOk=t=>!TM[t].only||TM[t].only===GAME;
+function applyGame(g){GAME=GAMES[g]?g:'re2';const re=GAME==='re2',cp=x=>JSON.parse(JSON.stringify(x));
+  for(const gk in STATS){const base=cp(VAN_STATS[gk]);if(re){[RE2_STATS[gk],RE2_CFG&&RE2_CFG.stats[gk]].forEach(src=>{if(src)for(const t in src)if(TM[t])base[t]=cp(src[t])})}fillObj(STATS[gk],base)}
+  for(const gk of ['small','large']){const base=np();for(const t in VAN_DEF_SZ[gk])base[t]=VAN_DEF_SZ[gk][t].map(a=>a.slice());
+    if(re){const tmp=np();for(const sg of gk==='small'?['small','hv']:['large','ba'])for(const t in STATS[sg]){if(TM[t].hull||!(RE2_STATS[sg][t]||RE2_CFG&&RE2_CFG.stats[sg]&&RE2_CFG.stats[sg][t]))continue;
+        (tmp[t]=tmp[t]||[]).push(...STATS[sg][t].map(e=>e[0]))}
+      for(const t in tmp){const u=[...new Set(tmp[t])].sort((a,b)=>szVol(a)-szVol(b));base[t]=parseSizes(u.join(','))}}
+    fillObj(DEF_SZ[gk],base)}
+  fillObj(ALLOW,VAN_ALLOW);if(re)for(const k in RE2_ALLOW){if(RE2_ALLOW[k])ALLOW[k]=RE2_ALLOW[k];else delete ALLOW[k]}
+  fillObj(VAL,VAN_VAL);if(re)Object.assign(VAL,RE2_VAL);
+  const o=store(),ov=re?o.statsRE2:o.stats1,sz=re?o.sizesRE2:o.sizes2;
+  OV=ov&&typeof ov==='object'?np(ov):np();SZ=sz&&sz.small&&sz.large?{small:np(sz.small),large:np(sz.large)}:{small:np(),large:np()};
+  document.querySelectorAll('[data-game]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.game===GAME));
+  $('#statSrc').textContent=re?('Werte je Block aus der Reforged-Eden-2-Blockliste'+(RE2_CFG?' (aus deiner Datei vom '+new Date(RE2_CFG.at).toLocaleDateString('de-AT')+')':' (eingebaut, ältere RE2-Version)')+'. Waffen gibt es in RE2 als Stufen leicht/mittel/schwer.'):'Werte je Block aus der Vanilla-Blockliste (BlocksConfig).';
+  $('#re2Imp').hidden=!re}
 /* CPU-Grenzen je Stufe (Kern = T1, Erweiterungen T2–T4) */
 const CPU_TIER={HV:[5000,12000,30000,70000],SV:[6000,15000,40000,100000],CV:[200000,500000,1500000,10000000],BA:[80000,200000,500000,1300000]};
 const VMAX_DEF={HV:{planet:20,space:20},SV:{planet:60,space:120},CV:{planet:60,space:100},BA:{planet:0,space:0}};
@@ -1396,7 +1469,14 @@ function tierInfo(){const n={2:0,3:0,4:0};S.blocks.forEach(v=>{const m=/^cpu(\d)
   let t=1;[2,3,4].forEach(k=>{if(n[k]>=EXT_NEED[k])t=k});return {n,tier:t}}
 let OV=np(), FLY={env:'planet',g:1,tier2:0,cpu:true,vmax:{}};
 try{const o=store();if(o.stats1&&typeof o.stats1==='object')OV=np(o.stats1);if(o.fly)FLY=Object.assign(FLY,o.fly)}catch(e){}
-const saveFly=()=>{const o=store();o.fly=FLY;storeSet(o)}, saveOV=()=>{const o=store();o.stats1=OV;storeSet(o)};
+const saveFly=()=>{const o=store();o.fly=FLY;storeSet(o)}, saveOV=()=>{const o=store();o[GAME==='re2'?'statsRE2':'stats1']=OV;storeSet(o)};
+/* CPU-Grenze: Vanilla über Stufen T1–T4, RE2 als Summe aus Kern-Grundwert und Erweiterungen (je Art höchstens MaxCount) */
+function cpuInfo(cls){if(GAME!=='re2'){const TI=tierInfo(),tier=FLY.tier2||TI.tier;return {tier,lim:CPU_TIER[cls][tier-1],auto:!FLY.tier2,parts:[]}}
+  const by=np();S.blocks.forEach(v=>{if(!VAL[v.t]||VAL[v.t][0]!=='cpuOut')return;const st=devStat(cls,v.t,v);if(st)(by[v.t]=by[v.t]||[]).push(st)});
+  const core=statList(cls,'core'),base=core?entry(core[0],'core',0).val:CPU_TIER[cls][0];let lim=base;const parts=[];
+  for(const t in by){const L=statList(cls,t),mx=L&&L[1][0][6]||Infinity,arr=by[t].sort((a,b)=>b.val-a.val),use=arr.slice(0,mx),sum=use.reduce((a,b)=>a+b.val,0);
+    lim+=sum;parts.push({t,n:arr.length,used:use.length,max:mx,sum})}
+  return {tier:0,lim,base,auto:true,parts}}
 const szVol=s=>s.split('x').reduce((a,b)=>a*(+b||1),1);
 const statSets=cls=>cls==='HV'?['hv','small']:cls==='BA'?['ba','large']:[CLASSES[cls].grp];
 function entry(gk,t,i){const e=STATS[gk][t][i],o=OV[gk+'|'+t+'|'+i]||{},pick=(k,d)=>o[k]!=null&&isFinite(o[k])?+o[k]:d;
@@ -1432,7 +1512,7 @@ function flyCalc(){
   const m0=m,load=Math.max(0,+FLY.load||0);m=m0+load;if(m0>0){Ix*=m/m0;Iy*=m/m0}
   let cargo=0;S.blocks.forEach(v=>{if(v.t==='cargo')cargo++});
   const env=cls==='HV'?'planet':FLY.env,g=env==='space'?0:Math.max(0,+FLY.g||0)*G0;
-  const TI=tierInfo(),tier=FLY.tier2||TI.tier,lim=CPU_TIER[cls][tier-1],over=cpu/lim-1,eff=FLY.cpu&&over>0?Math.max(.5,1-.5*over):1;
+  const CI=cpuInfo(cls),tier=CI.tier,lim=CI.lim,over=cpu/lim-1,eff=FLY.cpu&&over>0?Math.max(.5,1-.5*over):1;
   const a={};DORDER.forEach(d=>a[d]=m>0?F[d]*1000*eff/m:0);
   const net={...a};if(cls!=='HV'){net.u=a.u-g;net.d=a.d+g}
   const weight=m*g/1000; // kN
@@ -1441,7 +1521,7 @@ function flyCalc(){
   const vmax=FLY.vmax[cls+'|'+env]||VMAX_DEF[cls][env]||0;
   /* Zuladung: was der Hub (bzw. die Schwebekraft) zusätzlich zur Leermasse tragen kann; „sicher“ mit 25 % Reserve zum Steigen */
   const payAt=(gg,res)=>gg>0?liftF*1000/(gg*res)-m0:Infinity,pay=payAt(g,1),paySafe=payAt(g,1.25);
-  return {cls,tier,autoTier:!FLY.tier2,m,cpu,lim,over,eff,eIn,eThr,eOut,F,a,net,g,weight,liftF,liftR,tq,alpha,t90,vmax,miss,scaled,lift,c,m0,load,pay,paySafe,payAt,cargo}}
+  return {cls,tier,autoTier:CI.auto,cpuParts:CI.parts,cpuBase:CI.base,m,cpu,lim,over,eff,eIn,eThr,eOut,F,a,net,g,weight,liftF,liftR,tq,alpha,t90,vmax,miss,scaled,lift,c,m0,load,pay,paySafe,payAt,cargo}}
 /* Strecke D mit Anfahr-Beschleunigung a1, Bremsverzögerung a2 und Höchstgeschwindigkeit v */
 function trip(D,a1,a2,v){if(!(a1>0)||!(a2>0)||!(v>0))return null;
   const dAcc=v*v/(2*a1),dDec=v*v/(2*a2);
@@ -1477,7 +1557,7 @@ function tilesHTML(R,Q){const t=(k,v,[l,txt])=>`<div class="ftile"><span class="
     t('Max. Zuladung',R.cls==='BA'?'–':R.g===0?'∞':fmtMass(Math.max(0,R.pay)),payT)+
     t('Beweglichkeit',nf(Q.mobV*G0,1)+' m/s²',Q.mob)+
     t(R.cls==='HV'?'Schwebekraft':'Hubkraft',liftTxt,Q.lift)+
-    t('CPU · T'+R.tier+(R.autoTier?'':' (fest)'),nf(R.cpu,0)+' / '+nf(R.lim,0),Q.cpu)+
+    t(GAME==='re2'?'CPU':'CPU · T'+R.tier+(R.autoTier?'':' (fest)'),nf(R.cpu,0)+' / '+nf(R.lim,0),Q.cpu)+
     t('Energie',nf(R.eOut,0)+' kW',Q.pow)+
     t('90°-Drehung',Number.isFinite(R.t90)?nf(R.t90,1)+' s':'–',Q.turn)}
 function renderFlyTiles(){const el=$('#ftiles');if(!el)return;
@@ -1487,7 +1567,7 @@ function renderFlyTiles(){const el=$('#ftiles');if(!el)return;
 function syncFlyCtl(){const cls=S.cls;
   document.querySelectorAll('[data-env]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.env===FLY.env));
   document.querySelectorAll('[data-tier]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.tier===(FLY.tier2||0)));
-  const TI=tierInfo();document.querySelector('[data-tier="0"]').textContent='Auto (T'+TI.tier+')';
+  $('#tierFld').hidden=GAME==='re2';if(GAME!=='re2'){const TI=tierInfo();document.querySelector('[data-tier="0"]').textContent='Auto (T'+TI.tier+')'}
   $('#gRow').hidden=FLY.env==='space';$('#flyG').value=FLY.g;$('#flyCpu').checked=FLY.cpu;
   $('#flyV').value=FLY.vmax[cls+'|'+FLY.env]||VMAX_DEF[cls][FLY.env]||0;
   document.querySelector('[data-env="space"]').disabled=cls==='HV'}
@@ -1513,7 +1593,7 @@ function renderFly(){const R=flyCalc(),Q=rate(R),cls=R.cls;syncFlyCtl();
     `<tr><td>${p.n}</td><td>${nf(p.p.t,1)} s</td><td>${nf(p.p.vp,0)} m/s</td><td>${nf(p.a1,1)} m/s²</td><td>${nf(p.a2,1)} m/s²</td></tr>`:
     `<tr><td>${p.n}</td><td class="bad" colspan="4">nicht möglich – Schub fehlt</td></tr>`).join(''):'';
   $('#chartBox').hidden=!ok;if(ok)drawFlyChart();
-  const notes=['Werte: Vanilla-Blockliste (BlocksConfig). Hüllenblöcke zählen unabhängig von der Form mit voller Masse und ohne CPU.',
+  const notes=[(GAME==='re2'?'Werte: Reforged-Eden-2-Blockliste'+(RE2_CFG?' (deine Datei)':' (eingebaut)')+'. CPU-Grenze = Kern-Grundwert '+nf(R.cpuBase,0)+(R.cpuParts.length?' + '+R.cpuParts.map(p=>TM[p.t].n.replace(/ \(.*/,'')+' '+nf(p.sum,0)).join(' + '):'')+'. Schwebekraft (HV) steht nicht in der RE2-Liste – Vanilla-Wert.':'Werte: Vanilla-Blockliste (BlocksConfig).')+' Hüllenblöcke zählen unabhängig von der Form mit voller Masse und ohne CPU.',
     'Die Düsenposition spielt in Empyrion keine Rolle, nur Richtung und Schub. Bei Planeten wirkt die Schwerkraft gegen „hoch“ und hilft bei „runter“.',
     'Drehzeit ist eine Schätzung aus RCS-Drehmoment und Massenverteilung (beschleunigen und abbremsen, ohne Drehgrenze des Spiels).',
     'CPU über der Grenze senkt den Schub schrittweise bis auf 50 % (bei doppeltem Verbrauch). Höchstgeschwindigkeit und Grenzen hängen von den Spieleinstellungen ab – oben anpassbar.'];
@@ -1558,7 +1638,7 @@ $('#flyV').onchange=()=>{const v=+$('#flyV').value,k=S.cls+'|'+FLY.env;if(v>0&&v
 /* Spielwerte bearbeiten */
 function renderStats(){const gk=$('#statGrp').value,tb=$('#statTable'),G=STATS[gk];
   const inp=(id,f,v,own)=>`<input type="text" inputmode="decimal" data-k="${id}" data-f="${f}" value="${String(+(+v).toFixed(2)).replace('.',',')}" style="width:5.5em${own?';border-color:var(--accent)':''}" spellcheck="false">`;
-  tb.innerHTML='<tr><th>Block</th><th>Größe</th><th>Level</th><th>Masse kg</th><th>CPU</th><th>Strom kW</th><th>Wert</th></tr>'+TYPES.filter(t=>G[t.id]).map(t=>G[t.id].map((e,i)=>{
+  tb.innerHTML='<tr><th>Block</th><th>Größe</th><th>Level</th><th>Masse kg</th><th>CPU</th><th>Strom kW</th><th>Wert</th></tr>'+TYPES.filter(t=>G[t.id]&&gameOk(t.id)).map(t=>G[t.id].map((e,i)=>{
     const id=gk+'|'+t.id+'|'+i,st=entry(gk,t.id,i),o=OV[id]||{},vl=VAL[t.id];
     return `<tr><td>${i?'':t.n}</td><td>${e[0].replace(/x/g,'×')}</td><td>${inp(id,'lvl',st.lvl,o.lvl!=null).replace('5.5em','3.2em')}</td><td>${inp(id,'m',st.m,o.m!=null)}</td><td>${inp(id,'cpu',st.cpu,o.cpu!=null)}</td><td>${inp(id,'e',st.e,o.e!=null)}</td><td>${vl?inp(id,'val',st.val,o.val!=null)+' '+vl[2]:''}</td></tr>`}).join('')).join('');
   tb.querySelectorAll('input').forEach(el=>el.onchange=()=>{const id=el.dataset.k,f=el.dataset.f,[g,t,i]=id.split('|'),e=STATS[g][t][+i];
@@ -1567,6 +1647,32 @@ function renderStats(){const gk=$('#statGrp').value,tb=$('#statTable'),G=STATS[g
     saveOV();renderStats();updateInfo();$('#statMsg').textContent='Gespeichert.'})}
 const openStats=()=>{$('#statGrp').value=S.cls==='HV'?'hv':CLASSES[S.cls].grp;renderStats();$('#statMsg').textContent='';openModal('statModal')};
 $('#statBtn').onclick=openStats;$('#statBtn2').onclick=openStats;$('#statGrp').onchange=renderStats;
+/* RE2: eigene BlocksConfig.ecf einlesen */
+function parseEcf(txt){const B=new Map();let cur=null,depth=0;
+  for(const raw of txt.split(/\r?\n/)){let s=raw.trim();if(!s||s[0]==='#')continue;const h=s.indexOf('#');if(h>0)s=s.slice(0,h).trim();
+    if(s[0]==='{'){depth++;if(depth===1){const m=/^\{\s*\+?Block\s+(?:Id:\s*\d+,\s*)?Name:\s*([^,\s]+)(?:,\s*Ref:\s*([^,\s]+))?/.exec(s);cur=m?{_n:m[1],_r:m[2]}:null;if(cur)B.set(cur._n,cur)}if(s.endsWith('}'))depth--;continue}
+    if(s[0]==='}'){depth--;if(depth<=0){depth=0;cur=null}continue}
+    if(cur&&depth===1){const m=/^([A-Za-z0-9_]+):\s*(.*)$/.exec(s);if(m){let v=m[2];v=v[0]==='"'?v.slice(1).split('"')[0]:v.split(',')[0].trim();cur[m[1]]=v}}}
+  const res=(n,seen=new Set())=>{const b=B.get(n);if(!b)return null;if(b._r&&B.has(b._r)&&!seen.has(b._r)){seen.add(b._r);return Object.assign({},res(b._r,seen),b)}return b};
+  return {B,res}}
+function re2FromEcf(txt){const {B,res}=parseEcf(txt),PAR=new Map(),num=v=>{const x=parseFloat(v);return isFinite(x)?x:0};
+  B.forEach((b,n)=>String(b.ChildBlocks||'').split(',').forEach(c=>{c=c.trim();if(c&&!PAR.has(c))PAR.set(c,n)}));
+  const lvl=n=>{const x=res(n);if(x.UnlockLevel)return num(x.UnlockLevel)||1;const p=PAR.get(n),px=p&&res(p);return px&&px.UnlockLevel?num(px.UnlockLevel)||1:1};
+  const stats={};let hits=0,want=0;
+  for(const g in RE2_MAP){stats[g]={};for(const t in RE2_MAP[g]){const [names,long,val,fixed]=RE2_MAP[g][t],list=[],seen=new Set();
+    names.forEach(n=>{want++;const x=res(n);if(!x)return;hits++;let [a,b,c]=String(x.SizeInBlocks||'1,1,1').split(',').map(v=>parseInt(v)||1);if(long)[b,c]=[c,b];
+      const sz=a+'x'+b+'x'+c;if(seen.has(sz))return;seen.add(sz);const e=num(x.EnergyIn);let v=0;
+      if(val==='thr')v=num(x.ThrusterForce);else if(val==='tq')v=num(x.Torque);else if(val==='out')v=num(x.EnergyOut)||Math.max(0,-e);else if(val==='cpuOut')v=num(x.CPUOut);else if(fixed&&fixed[n]!=null)v=fixed[n];
+      const r=[sz,num(x.Mass),num(x.CPUIn),Math.max(0,e),v,lvl(n)];if(x.MaxCount)r.push(num(x.MaxCount));list.push(r)});
+    if(list.length)stats[g][t]=list}}
+  return {stats,hits,want}}
+$('#re2Load').onclick=()=>$('#re2File').click();
+$('#re2File').onchange=()=>{const f=$('#re2File').files[0];if(!f)return;$('#re2Msg').textContent='Lese '+f.name+' …';
+  f.text().then(txt=>{const r=re2FromEcf(txt);if(r.hits<r.want*.5){$('#re2Msg').textContent='Das sieht nicht nach der RE2-BlocksConfig.ecf aus ('+r.hits+' von '+r.want+' Blöcken gefunden).';return}
+    RE2_CFG={stats:r.stats,at:Date.now()};try{localStorage.setItem('empyrion-werftplaner-re2cfg',JSON.stringify(RE2_CFG))}catch(e){}
+    applyGame('re2');renderStats();syncUI();updateInfo();$('#re2Msg').textContent=`Übernommen: ${r.hits} von ${r.want} Blöcken. Waffenstufen und Schwebekraft bleiben bei den eingebauten Werten.`})
+   .catch(()=>{$('#re2Msg').textContent='Datei konnte nicht gelesen werden.'});$('#re2File').value=''};
+$('#re2Def').onclick=()=>{RE2_CFG=null;try{localStorage.removeItem('empyrion-werftplaner-re2cfg')}catch(e){}applyGame('re2');renderStats();syncUI();updateInfo();$('#re2Msg').textContent='Wieder die eingebauten RE2-Werte.'};
 $('#statReset').onclick=()=>{OV=np();saveOV();renderStats();updateInfo();$('#statMsg').textContent='Alle Werte wieder wie in der Blockliste.'};
 
 /* ---------- Probeflug: das Schiff selbst fliegen ----------
@@ -1780,7 +1886,7 @@ new MutationObserver(()=>{if($('#editModal').hidden&&editSnap!==null)closeEditCl
 function renderSizes(){
   const tb=$('#szTable'),cell=(g,t)=>{const ok=DEVICES.find(x=>x.id===t)&&(g==='small'?['SV','HV']:['CV','BA']).some(c=>allowed(t,c));
     const own=SZ[g]&&SZ[g][t]&&SZ[g][t].length;return `<td class="g"><input type="text" id="sz-${g}-${t}" data-g="${g}" data-t="${t}" value="${sizeList(t,g).map(fmtSz).join(', ')}" ${ok?'':'disabled'} aria-label="${TM[t].n} ${g==='small'?'klein':'groß'}" spellcheck="false" style="width:9.5em${own?';border-color:var(--accent)':''}">${ok?'':'<div class="hint">nicht erlaubt</div>'}</td>`};
-  tb.innerHTML=`<tr><th>Gerät</th><th class="g">Klein · SV / HV</th><th class="g">Groß · CV / BA</th></tr>`+DEVICES.filter(t=>!t.old).map(t=>`<tr><td>${t.n}</td>${cell('small',t.id)}${cell('large',t.id)}</tr>`).join('');
+  tb.innerHTML=`<tr><th>Gerät</th><th class="g">Klein · SV / HV</th><th class="g">Groß · CV / BA</th></tr>`+DEVICES.filter(t=>!t.old&&gameOk(t.id)).map(t=>`<tr><td>${t.n}</td>${cell('small',t.id)}${cell('large',t.id)}</tr>`).join('');
   tb.querySelectorAll('input').forEach(e=>e.onchange=()=>{const g=e.dataset.g,t=e.dataset.t,list=parseSizes(e.value);
     const def=(DEF_SZ[g][t]||[[1,1,1]]).map(fmtSz).join();
     if(!list.length||list.map(fmtSz).join()===def){delete SZ[g][t];$('#szMsg').textContent='Wert aus der Blockliste übernommen.'}
@@ -1899,7 +2005,7 @@ addEventListener('pagehide',()=>{const o=store();o.last=serialize();o.layer=laye
 /* ---------- Start ---------- */
 readTheme();
 const st=store();
-if(st.sizes2&&st.sizes2.small&&st.sizes2.large)SZ={small:np(st.sizes2.small),large:np(st.sizes2.large)};
+applyGame(GAMES[st.game]?st.game:'re2');
 try{S=st.last?deserialize(st.last):null}catch(e){S=null}
 if(!S){S=sample();layer=2}else layer=clamp(st.layer||0,0,S.H-1);
 renderDrawer();renderShapeGrid();syncViewHint();
@@ -1910,6 +2016,8 @@ function applyTheme(m){themeMode=m;const r=document.documentElement;if(m==='auto
   const metas=document.querySelectorAll('meta[name="theme-color"]');
   metas.forEach((mt,i)=>mt.setAttribute('content',m==='auto'?(i===0?'#e9edf1':'#0e1319'):m==='dark'?'#0e1319':'#e9edf1'));
   readTheme();iconMat='';eIconMat='';syncUI();drawGrid();render3D()}
+document.querySelectorAll('[data-game]').forEach(b=>b.onclick=()=>{if(b.dataset.game===GAME)return;applyGame(b.dataset.game);try{const o=store();o.game=GAME;storeSet(o)}catch(e){}
+  if(!gameOk(cur))cur='steel';renderDrawer();syncUI();updateInfo();render3D();toast('Spielversion: '+GAMES[GAME])});
 document.querySelectorAll('[data-theme-set]').forEach(b=>b.onclick=()=>{applyTheme(b.dataset.themeSet);try{const o=store();o.theme=themeMode;storeSet(o)}catch(e){}});
 if(st.theme==='light'||st.theme==='dark')applyTheme(st.theme);
 const GH={below:['↓','darunter'],above:['↑','darüber'],off:['○','keine']};
